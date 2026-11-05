@@ -8,6 +8,7 @@ import { createSettings } from '../core/settings.js';
 import { createBus } from '../core/bus.js';
 import { createRemote } from '../core/remote.js';
 import { startAutoUpdate } from '../core/autoupdate.js';
+import { createSceneAudio } from '../core/sceneaudio.js';
 import { remainingSeconds, countdownView, waxTotal } from '../core/countdown.js';
 
 const q = new URLSearchParams(location.search);
@@ -18,6 +19,9 @@ const $ = (id) => document.getElementById(id);
 // ---------------------------------------------------------------- settings + room (same pattern as overlay.html)
 const settings = createSettings();
 const bus = createBus({ name: 'pdbull' });
+// generated ambience (dock: settings.ambience.enabled / volume); a capture stays silent
+const audio = createSceneAudio({ preset: 'starting', settings: settings.get(), AudioCtx: SHOT ? null : globalThis.AudioContext });
+addEventListener('pagehide', () => audio.dispose());
 const SHOT_EPOCH = 1e12; // shot mode: the clock is the scene clock, so captures are deterministic
 let wtRef = null;
 const nowMs = SHOT ? () => SHOT_EPOCH + (wtRef ? wtRef.time : 0) * 1000 : () => Date.now();
@@ -41,6 +45,7 @@ function render() { // DOM side of the settings (the 3D side reads C every tick)
   if (C.end !== prevEnd) setTotal();
   const f = $('follower'), w = $('welcome');
   f.textContent = C.follower; w.hidden = !C.follower;
+  audio.apply(settings.get());
 }
 render();
 settings.onChange(render);

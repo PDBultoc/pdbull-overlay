@@ -13,6 +13,7 @@ import { createRemote } from '../core/remote.js';
 import { startAutoUpdate } from '../core/autoupdate.js';
 import { connect } from '../core/twitchchat.js';
 import { addLine, trimName } from '../core/brbchat.js';
+import { createSceneAudio } from '../core/sceneaudio.js';
 
 const Q = new URLSearchParams(location.search);
 // quality knob for weak machines, set once in the OBS source URL: ?q=low (smoke ~1/3, wisps ~1/2, no DOF); default = full look
@@ -331,6 +332,9 @@ function build(wt) {
 /* ------------------------------------------------------------------ boot */
 const settings = createSettings();
 const bus = createBus({ name: 'pdbull' });
+// generated ambience (dock: settings.ambience.enabled / volume); a review shot stays silent
+const audio = createSceneAudio({ preset: 'brb', settings: settings.get(), AudioCtx: SHOT ? null : globalThis.AudioContext });
+addEventListener('pagehide', () => audio.dispose());
 // the scene is consume-only: it never publishes settings, so no echo guard (fromRemote) is needed
 const remote = createRemote({
   room: Q.get('room') || '',
@@ -340,6 +344,7 @@ bus.on('settings', (p) => { if (p && typeof p === 'object') settings.patch(p); e
 
 function render() {
   const s = settings.get();
+  audio.apply(s);
   setSmokeText(s.scenes && s.scenes.brbText);
   setFollower(Q.get('follower') || (s.latest && s.latest.follower), true);
 }
