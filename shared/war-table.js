@@ -11,6 +11,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
 import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
+import { DUST_DRIFT_X_GLSL } from '../core/dustdrift.js';
 
 export { THREE };
 
@@ -1047,7 +1048,7 @@ attribute float aPhase; attribute float aSize;
 varying float vB;
 void main(){
   vec3 p = position;
-  p.x += sin(uTime * 0.11 + aPhase * 6.0) * 0.35 + uTime * 0.02;
+  p.x += ${DUST_DRIFT_X_GLSL};
   p.y += sin(uTime * 0.07 + aPhase * 9.0) * 0.25 + mod(uTime * 0.015 + aPhase, 1.0) * 0.4;
   p.z += cos(uTime * 0.09 + aPhase * 4.0) * 0.35;
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
