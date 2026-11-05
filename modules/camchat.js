@@ -12,13 +12,21 @@ const CAM_HTML = `
     <i class="k k-tl"></i><i class="k k-tr"></i><i class="k k-bl"></i><i class="k k-br"></i>
   </div>`;
 
+let cssUsers = 0; // mounts currently using the stylesheet; the last unmount removes it again
 function ensureCss() {
+  cssUsers++;
   if (document.getElementById('camchat-css')) return;
   const l = document.createElement('link');
   l.id = 'camchat-css';
   l.rel = 'stylesheet';
   l.href = new URL('./camchat.css', import.meta.url).href;
   document.head.appendChild(l);
+}
+function releaseCss() {
+  if (--cssUsers > 0) return;
+  cssUsers = 0;
+  const l = document.getElementById('camchat-css');
+  if (l) l.remove();
 }
 
 // ctx: { cfg, bus, latest(): running match or null, reportStatus(st), playersOverride }
@@ -79,12 +87,14 @@ export function mount(root, ctx = {}) {
   const report = (s) => { if (ctx.reportStatus) ctx.reportStatus(s); else if (bus) bus.emit('status', s); };
   const conn = cfg.channel ? connect({ channel: cfg.channel, onMessage: addChat, onStatus: report }) : null;
 
+  let done = false;
   return {
     unmount() {
       if (conn && conn.close) conn.close();
       for (const off of offs) if (typeof off === 'function') off();
       timers.forEach(clearTimeout);
       root.innerHTML = '';
+      if (!done) { done = true; releaseCss(); }
     },
   };
 }

@@ -36,3 +36,22 @@ test('emoteParts splits text around Twitch emote ranges', () => {
   assert.deepEqual(emoteParts('plain', ''), ['plain']);
   assert.deepEqual(emoteParts('x', 'garbage'), ['x']);
 });
+
+test('mount adds the stylesheet link, the last unmount removes it again', async () => {
+  const head = []; 
+  const mk = () => ({ remove() { const i = head.indexOf(this); if (i >= 0) head.splice(i, 1); }, appendChild() {}, style: { setProperty() {} } });
+  globalThis.document = {
+    head: { appendChild: (e) => head.push(e) },
+    getElementById: (id) => head.find((e) => e.id === id) || null,
+    createElement: () => mk(),
+  };
+  try {
+    const { mount } = await import('../modules/camchat.js');
+    const a = mount(mk(), {}), b = mount(mk(), {});
+    assert.equal(head.length, 1);   // one shared link
+    a.unmount(); a.unmount();       // double unmount must not release twice
+    assert.equal(head.length, 1);
+    b.unmount();
+    assert.equal(head.length, 0);
+  } finally { delete globalThis.document; }
+});
