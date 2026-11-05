@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Starting Soon</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="starting.css">
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+</head>
+<body class="dark v1">
+<div class="stage" id="stage">
+  <div class="fill" id="gl"></div>
+  <div class="fade" id="fade"></div>
+
+  <!-- corner texts -->
+  <div class="corner corner-tl"><span class="rule"></span>PDBull</div>
+  <div class="corner corner-tr" id="welcome" hidden>Welcome, <span id="follower"></span><span class="rule"></span></div>
+
+  <!-- age plate: a small engraved brass plate, shown for a few seconds when the village advances -->
+  <div class="age-plate" id="agePlate"><i class="pin"></i><span id="ageName">Dark Age</span><i class="pin"></i></div>
+
+  <!-- title block -->
+  <div class="title-block" id="titleBlock">
+    <div class="soon" id="soon">Starting soon</div>
+    <div class="count" id="count"></div>
+    <div class="burn" id="burn"><div class="wax" id="wax"><i class="ember"></i><i class="smoke"></i></div></div>
+    <div class="begin" id="begin">Starting now</div>
+  </div>
+</div>
+
+<script type="module" src="starting.js"></script>
+</body>
+</html>

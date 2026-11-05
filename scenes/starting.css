@@ -1,0 +1,79 @@
+/* A1 · Starting Soon (orbit over the campaign map) — page styles */
+.fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+
+/* ---------- corner texts ---------- */
+.corner {
+  position: absolute; top: 46px; display: flex; align-items: center; gap: 16px;
+  font-family: var(--font-title); font-size: 17px; font-weight: 500; letter-spacing: 0.32em; text-transform: uppercase;
+  color: #c2b394; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 14px rgba(0, 0, 0, 0.7);
+}
+.corner b { color: var(--brass-400); font-weight: 600; }
+.corner .rule { display: block; width: 46px; height: 1px; background: linear-gradient(90deg, transparent, var(--brass-500)); }
+.corner-tl { left: 64px; }
+.corner-tr { right: 64px; font-family: var(--font-serif); font-size: 24px; font-style: italic; letter-spacing: 0.03em; text-transform: none; }
+.corner-tr .rule { background: linear-gradient(90deg, var(--brass-500), transparent); }
+.corner-tr span#follower { font-family: var(--font-ui); font-style: normal; font-weight: 500; font-size: 19px; letter-spacing: 0.01em; color: var(--ivory-200); margin-left: 4px; }
+
+/* ---------- age plate (engraved brass, top centre) ---------- */
+.age-plate {
+  position: absolute; left: 50%; top: 40px; transform: translate(-50%, var(--age-y, -8px));
+  opacity: var(--age-op, 0); display: flex; align-items: center; gap: 22px; padding: 12px 30px 11px;
+  font-family: var(--font-title); font-weight: 600; font-size: 22px; letter-spacing: 0.34em; text-transform: uppercase;
+  color: #3a280c; text-shadow: 0 1px 0 rgba(255, 238, 200, 0.45), 0 -1px 0 rgba(60, 38, 10, 0.35);
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 240, 205, 0.05) 0 1px, rgba(70, 48, 18, 0.05) 1px 2px),
+    linear-gradient(180deg, #e7cb92 0%, #caa566 48%, #a9834b 100%);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(255, 236, 190, 0.35), inset 0 0 0 4px rgba(120, 88, 40, 0.0), inset 0 0 0 5px rgba(70, 48, 16, 0.55),
+    0 10px 26px rgba(0, 0, 0, 0.65), 0 2px 4px rgba(0, 0, 0, 0.6);
+  white-space: nowrap; pointer-events: none;
+}
+.age-plate .pin { width: 9px; height: 9px; border-radius: 50%; flex: none;
+  background: radial-gradient(circle at 35% 35%, #f6e2b8, #8d6c3b 60%, #4d3817); box-shadow: 0 1px 1px rgba(0, 0, 0, 0.5); }
+
+/* ---------- title block (bottom right) ---------- */
+.title-block { position: absolute; right: 96px; bottom: 96px; width: 470px; text-align: right; color: var(--ivory-200); }
+.title-block::before { content: ""; position: absolute; right: -96px; bottom: -96px; width: 820px; height: 460px; z-index: -1;
+  background: radial-gradient(ellipse 62% 66% at 84% 90%, rgba(5, 3, 2, 0.8) 0%, rgba(5, 3, 2, 0.5) 50%, rgba(5, 3, 2, 0) 100%); }
+.soon { font-family: var(--font-title); font-weight: 500; font-size: 25px; margin-bottom: 18px; text-transform: uppercase; letter-spacing: 0.34em;
+  color: var(--ivory-300); text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9); }
+.count {
+  font-family: var(--font-serif); font-weight: 600; font-size: 148px; margin-bottom: 22px; font-variant-numeric: lining-nums tabular-nums; line-height: 0.9;
+  background: linear-gradient(180deg, #f6ead2 0%, #ecd7b0 55%, #e2b878 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.85));
+}
+/* burning wick line: wax shrinks from the right, ember at its end */
+.burn { position: relative; height: 2px; background: rgba(168, 132, 78, 0.18); }
+.wax { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: linear-gradient(90deg, var(--brass-600), var(--ivory-300)); }
+.ember {
+  position: absolute; right: -5px; top: 50%; width: 9px; height: 15px; margin-top: -13px; border-radius: 50% 50% 45% 45% / 65% 65% 35% 35%;
+  background: radial-gradient(ellipse at 50% 70%, #fff6e0 0%, #ffd38a 30%, rgba(255, 150, 50, 0.85) 60%, rgba(255, 120, 30, 0) 75%);
+  animation: flick 1.7s infinite alternate ease-in-out;
+}
+.ember::after { content: ""; position: absolute; left: -16px; top: -10px; width: 41px; height: 41px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 179, 71, 0.30), rgba(255, 179, 71, 0) 70%); }
+@keyframes flick { 0% { transform: scale(1, 1); } 40% { transform: scale(0.92, 1.08) skewX(2deg); } 100% { transform: scale(1.04, 0.95) skewX(-2deg); } }
+.smoke { position: absolute; right: -3px; top: -60px; width: 6px; height: 60px; opacity: 0;
+  background: linear-gradient(0deg, rgba(200, 190, 175, 0.5), rgba(200, 190, 175, 0)); filter: blur(3px); border-radius: 3px; }
+.begin { position: absolute; right: 0; bottom: 34px; font-size: 92px; white-space: nowrap; opacity: 0; font-family: var(--font-title); font-weight: 600; letter-spacing: 0.12em;
+  color: var(--flame); text-shadow: 0 0 22px rgba(255, 179, 71, 0.35), 0 2px 6px rgba(0, 0, 0, 0.9);
+  transition: opacity 2.4s var(--ease-heavy), transform 2.4s var(--ease-heavy); transform: translateY(14px); }
+body.ended .begin { opacity: 1; transform: none; }
+body.ended .count, body.ended .soon { opacity: 0.0; transition: opacity 1.6s ease; }
+body.ended .ember { animation: none; opacity: 0; transition: opacity 0.4s; }
+body.ended .smoke { animation: smoke 3.5s ease-out 1 forwards; }
+@keyframes smoke { 0% { opacity: 0.7; transform: translateY(0) scaleY(0.4); } 100% { opacity: 0; transform: translate(10px, -40px) scaleY(1.4) skewX(-12deg); } }
+
+
+/* ---------- production additions ---------- */
+/* the scrim must paint above the canvas: give the block its own stacking context */
+.title-block { isolation: isolate; }
+.title-block::before { background: radial-gradient(ellipse 62% 66% at 84% 90%, rgba(5, 3, 2, 0.86) 0%, rgba(5, 3, 2, 0.56) 50%, rgba(5, 3, 2, 0) 100%); }
+/* the follower name (up to 25 chars) never runs past its band */
+.corner-tr[hidden] { display: none; }
+.corner-tr span#follower { display: inline-block; max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+/* no countdown set: only "Starting soon" */
+body.state-soon .count, body.state-soon .burn { display: none; }
+body.state-soon .soon { margin-bottom: 0; }
+body.shot .ember { animation: none; }
