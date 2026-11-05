@@ -1,7 +1,7 @@
-# pdbull-overlay — NEXT (2026-11-05, production plan written)
-- Git: branch main, first commit bc56cbc (round-2 prototypes + docs; local only, no remote yet). Repo-local identity PDBultoc (noreply) set.
-- Paul approved round 2 (A1 · B2 · D1 · E3 · F3) and all 7 production decisions ("Da, toate"): new public repo PDBultoc/pdbull-overlay + Pages, goblin engine copied, 5 scenes + last-follower strip, Streamlabs socket alerts with synth sounds (URL override), profileId 551021 (PDBull), intro 1v1 + TG, token faces deferred, perf gate.
-- PLAN: docs/plans/2026-11-05-pdbull-overlay-production-plan.md (T0–T15 with depends:). APPROVED by Paul 2026-11-05 ("Aprob"); committed.
-- Next session: execute the plan (subagent-driven-development; Paul opted into workflows for this project). READY first: T0; then T1 (Paul in OBS), T2, T4 in parallel.
-- Live view: preview_start "pdbull-proto" (port 8796). Headless capture: docs/capture.md.
-- Gotchas: aoe2companion only from a browser (never curl/node); shared/* has one owner (T2/T3); round-2 builder findings are in the plan's T2/T5/T6/T8/T9 lists (source: workflow wf_9472b6d9-67c result JSON).
+# pdbull-overlay — NEXT (2026-11-05, production build done, waiting on Paul)
+- Branch `production` (from main b3f55e9), last commit 5b5c02f, version.json 2026-11-05.3; 129/129 node tests (`timeout 60 npm test`). Nothing pushed; no remote yet. Plan: docs/plans/2026-11-05-pdbull-overlay-production-plan.md; ledger/rulings: .superpowers/sdd/2026-11-05-pdbull-overlay-production-plan/progress.md (git-ignored).
+- DONE: T0 T1(Paul: dock↔source local path WORKS in OBS) T2 T3 T4 T5 T6 T7 T8 T9 + final whole-branch review + fix wave. Overlay renders intro/alerts (dbg-final-sheet).
+- WAITING on Paul: T11 verdict on docs/productie-2026-11-05.jpg (watch: darker umber fog in Starting; yellow vs grey banners in 3v3 intro).
+- NEXT: T10 (Paul pastes Streamlabs token in panel.html on http://127.0.0.1:8797, presses 4 Streamlabs "Test" alerts; save socket log → tests/fixtures/streamlabs-paul.json; verify tier/gift mapping, marked UNVERIFIED in core/streamlabs.js) → T12 (Paul runs `gh repo create PDBultoc/pdbull-overlay --public --source . --remote origin`; merge production→main on Paul's yes; push; Pages) → T13 INSTALL.md (Romanian; mention: don't toggle alert settings mid-alert; BRB `?q=low`) → T14 perf in OBS (watch document.hidden, fps <10 cutting alerts) → T15 live.
+- Local preview: preview_start "pdbull-site" (pdbull-overlay/.claude/launch.json, port 8797, repo root).
+- RULE (Paul 2026-11-05, after a PC freeze): never reproduce a hang by re-running; read code, find cause, fix. Headless captures only one at a time, never in retry loops. Starting Soon renders fine on the real GPU (checked in the built-in browser).
