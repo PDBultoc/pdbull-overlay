@@ -83,6 +83,21 @@ export function seriesScore(l, profileId, opponentId, sinceIso) {
   return out;
 }
 
+const MAX_RUNNING_MS = 4 * 3600 * 1000;
+
+// The game in progress: the NEWEST match of the page (by start time, so API order does not matter), only if it is
+// unfinished and started < 4 h ago. aoe2companion leaves abandoned games open for ever; those must never count.
+function pickLatest(matches, nowMs) {
+  let best = null;
+  for (const m of matches) {
+    if (!m) continue;
+    const t = Date.parse(m.started);
+    if (!best || (Number.isFinite(t) && t > best.t)) best = { m, t };
+  }
+  if (!best || !best.m.running) return null;
+  return nowMs - best.t < MAX_RUNNING_MS ? best.m : null;
+}
+
 export function createPoller({
   profileId,
   intervalSec = 20,
@@ -91,6 +106,7 @@ export function createPoller({
   onStatus = () => {},
   setTimer = setTimeout,
   clearTimer = clearTimeout,
+  now = () => Date.now(),
 } = {}) {
   // Cloudflare caches this endpoint (s-maxage=3600, seen HIT with Age 48 s on 2026-10-31),
   // which hid a running ranked game; a per-interval query value forces a fresh answer.
@@ -130,7 +146,7 @@ export function createPoller({
         const data = await res.json();
         const events = diffMatches(prev, data, profileId);
         prev = data;
-        latest = list(data).map((r) => normalizeMatch(r, profileId)).find((m) => m && m.running) || null;
+        latest = pickLatest(list(data).map((r) => normalizeMatch(r, profileId)), now());
         failDelay = base;
         status(true);
         if (events.length) onEvents(events);

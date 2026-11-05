@@ -31,7 +31,7 @@ La **Starting** și **BRB** bifează **Shutdown source when not visible** (nu co
 5. Dacă apare un dreptunghi negru, spune-mi.
 
 ### 2b. Ending Soon
-Scena veche (imagine + alertbox) nu mai trebuie: șterge imaginea și alertbox-ul. Pune în loc un **Browser Source** cu link-ul de la **Copy End link**, 1920 × 1080. Bifează **Shutdown source when not visible** și **Refresh browser when scene becomes active**.
+Scena veche (imagine + alertbox) nu mai trebuie: șterge imaginea și alertbox-ul. Pune în loc un **Browser Source** cu link-ul de la **Copy End link**, 1920 × 1080. Bifează **Shutdown source when not visible** și **Refresh browser when scene becomes active**. Dacă la trecerea pe scenă vezi o clipă un cadru gol, debifează și spune-mi.
 
 ### 2c. Sunet
 Pe sursele Starting, BRB și End bifează **Control audio via OBS**. Volumul și pornit/oprit se reglează din cardul **Ambience** din dock.

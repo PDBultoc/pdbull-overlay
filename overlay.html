@@ -94,7 +94,8 @@ const poller = createPoller({
   onEvents: (evs) => { for (const e of evs) bus.emit(e.type, { match: e.match }); },
   onStatus: (st) => {
     reportStatus(st);
-    if (st && st.ok) bus.emit('match-running', { match: poller.latest() });
+    // deferred: the poller reports status BEFORE its events, and the banner must see match-start (intro wait) first
+    if (st && st.ok) queueMicrotask(() => bus.emit('match-running', { match: poller.latest() }));
   },
 });
 

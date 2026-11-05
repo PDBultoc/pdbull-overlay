@@ -11,6 +11,19 @@ function avgOf(players) {
   return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null;
 }
 
+/** Ratings for a test-* match (never touches the network): a rating carried on the player wins (null = unknown, shows "—");
+ *  a player without the field gets samples[index] (overlay demo matches). -> Map profileId -> number */
+export function testRatings(match, samples = []) {
+  const out = new Map();
+  const all = [...((match && match.myTeam) || []), ...(((match && match.enemies) || []).flat())];
+  all.forEach((p, i) => {
+    if (!p || p.profileId == null) return;
+    const v = 'rating' in p ? p.rating : samples.length ? samples[i % samples.length] : null;
+    if (typeof v === 'number' && Number.isFinite(v)) out.set(p.profileId, v);
+  });
+  return out;
+}
+
 /** -> { map, teams: [{ mine, avg, players: [{ id, name, civ, colorHex, rating, me }] }] }, my team first; null for no match */
 export function barFromMatch(match, ratings) {
   if (!match) return null;

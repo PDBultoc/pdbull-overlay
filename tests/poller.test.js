@@ -36,7 +36,7 @@ function setup(responses, extra = {}) {
   const poller = createPoller({
     profileId: ME, intervalSec: 20, fetchFn,
     onEvents: (e) => events.push(...e), onStatus: (s) => statuses.push(s),
-    setTimer: timers.setTimer, clearTimer: timers.clearTimer, ...extra,
+    setTimer: timers.setTimer, clearTimer: timers.clearTimer, now: () => Date.parse("2026-10-31T18:30:00.000Z"), ...extra,
   });
   return { poller, timers, events, statuses, urls };
 }
@@ -100,4 +100,33 @@ test("stop() clears the pending timer and prevents rescheduling", async () => {
   assert.equal(timers.q.length, 1);
   poller.stop();
   assert.equal(timers.q.length, 0);
+});
+
+const pa100 = JSON.parse(fs.readFileSync(new URL("./fixtures/pa100.json", import.meta.url), "utf8"));
+const PA = 551021;
+const NOW = Date.parse("2026-11-05T18:00:00.000Z");
+function pollOnce(page) {
+  const poller = createPoller({
+    profileId: PA, fetchFn: async () => ok(page), now: () => NOW,
+    setTimer: () => 1, clearTimer: () => {},
+  });
+  return poller.start().then(() => { poller.stop(); return poller.latest(); });
+}
+
+test("latest: pa100 holds a weeks-old never-finished match, between games latest is null", async () => {
+  assert.ok(pa100.some((m) => m.finished == null), "fixture must contain the stale unfinished match");
+  assert.equal(await pollOnce(pa100), null);
+});
+
+test("latest: a fresh running newest match is returned (any page order)", async () => {
+  const done = pa100.filter((m) => m.finished != null);
+  const live = { ...done[0], matchId: 999, finished: null, started: "2026-11-05T17:30:00.000Z" };
+  assert.equal((await pollOnce([live, ...pa100])).id, 999); // API order: newest first
+  assert.equal((await pollOnce([...pa100, live])).id, 999); // fixture order: oldest first
+});
+
+test("latest: a running match started more than 4 h ago is not accepted", async () => {
+  const done = pa100.filter((m) => m.finished != null);
+  const old = { ...done[0], matchId: 998, finished: null, started: "2026-11-05T13:00:00.000Z" };
+  assert.equal(await pollOnce([old, ...pa100]), null);
 });

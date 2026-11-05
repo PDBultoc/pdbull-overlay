@@ -19,7 +19,7 @@
 @keyframes mb-drop { from { transform: translateY(-30px); opacity: 0; } 55% { opacity: 1; } to { transform: none; opacity: 1; } }
 
 [data-mod=matchbar] .hd { font-family: var(--font-title); font-weight: 600; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
-  color: var(--brass-300); text-align: center; padding: 1px 0 4px; margin-bottom: 2px; white-space: nowrap;
+  color: var(--brass-300); text-align: center; padding: 1px 0 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85); border-bottom: 1px solid rgba(0, 0, 0, 0.7); box-shadow: 0 1px 0 rgba(227, 196, 138, 0.12); }
 [data-mod=matchbar] .team + .team { margin-top: 3px; padding-top: 3px; border-top: 1px solid rgba(0, 0, 0, 0.7); box-shadow: 0 -1px 0 rgba(227, 196, 138, 0.1); }
 [data-mod=matchbar] .th { display: flex; justify-content: space-between; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;

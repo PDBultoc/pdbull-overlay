@@ -2,7 +2,7 @@
 // Bus: 'match-start' {match} (shown after 'intro-end' or a 12 s fallback), 'match-running' {match|null} (shown at once when no
 // intro is pending; null / finished hides), 'match-end' (hides), 'intro-end' {id}. Rows render with "—" first and are filled
 // when the shared ratings lookup (ctx.ratings) resolves. Settings: modules.matchbar.enabled (read by overlay.html).
-import { barFromMatch, eloText, createBannerFlow } from '../core/matchbarlogic.js';
+import { barFromMatch, eloText, createBannerFlow, testRatings } from '../core/matchbarlogic.js';
 import { introPlayerIds } from '../core/intrologic.js';
 import { createRatings } from '../core/ratings.js';
 
@@ -92,12 +92,11 @@ export function mount(root, ctx = {}) {
     shownKey = key;
     const ids = introPlayerIds(match);
     const test = /^test-/.test(String(match.id));
-    const sample = new Map(ids.map((id, i) => [id, SAMPLE_ELOS[i % SAMPLE_ELOS.length]]));
-    const first = barFromMatch(match, test ? sample : new Map());
+    const first = barFromMatch(match, test ? testRatings(match, SAMPLE_ELOS) : new Map());
     if (!first) return;
     const { root: bar, eloNodes, avgNodes } = build(first);
     slot.replaceChildren(bar);
-    const fit = () => bar.querySelectorAll('.nm, .civ').forEach(fitText);
+    const fit = () => bar.querySelectorAll('.hd, .nm, .civ').forEach(fitText);
     fit();
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (gen === my) fit(); }).catch(() => {});
     if (test) return;

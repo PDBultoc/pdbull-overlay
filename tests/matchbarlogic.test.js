@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { normalizeMatch } from '../core/aoe2.js';
 import { rm1v1 } from '../core/ratings.js';
-import { barFromMatch, eloText } from '../core/matchbarlogic.js';
+import { barFromMatch, eloText, testRatings } from '../core/matchbarlogic.js';
 
 const load = (n) => JSON.parse(fs.readFileSync(new URL('./fixtures/' + n, import.meta.url), 'utf8'));
 const pa100 = load('pa100.json');
@@ -130,4 +130,18 @@ test('flow: match-running null / finished hides (not while waiting); match-end h
   const w = rig(); w.flow.start(M(5)); w.flow.running(null); assert.deepEqual(w.log, []);
   w.flow.end(); assert.deepEqual(w.log, ['hide']); assert.equal(w.timers().length, 0);
   w.flow.introEnd(5); assert.deepEqual(w.log, ['hide']);
+});
+
+test('testRatings: ratings carried on test players win (null stays unknown), players without the field get samples', () => {
+  const m = {
+    id: 'test-x',
+    myTeam: [{ profileId: 1, rating: 1620 }, { profileId: 2, rating: null }],
+    enemies: [[{ profileId: 3 }, { profileId: 4, rating: 1300 }]],
+  };
+  const r = testRatings(m, [111, 222, 333, 444]);
+  assert.equal(r.get(1), 1620);
+  assert.equal(r.has(2), false);
+  assert.equal(r.get(3), 333); // index in the player order
+  assert.equal(r.get(4), 1300);
+  assert.equal(eloText(barFromMatch(m, r).teams[0].players[1].rating), '—');
 });
