@@ -1,0 +1,52 @@
+/* matchbar - in-game match banner, "Brass plaque" (ported from prototypes/matchbar.css .v1, scoped).
+   One heavy drop on entry, then completely still. Anchored right 8 px, top 58 px (under the game menu buttons).
+   Fixed widths so the 25-char Twitch names fit whole (name column >= 182 px at 1v1); matchbar.js shrinks the font
+   of a name that is still too wide. Never ellipsis. */
+[data-mod=matchbar] .slot { position: absolute; top: 58px; right: 8px; }
+
+[data-mod=matchbar] .mb { position: relative; box-sizing: border-box; width: 340px; font-family: var(--font-ui); color: var(--text-light);
+  font-variant-numeric: tabular-nums; padding: 5px 9px 7px; border: 2px solid transparent; border-radius: 4px;
+  animation: mb-drop 0.6s var(--ease-heavy) both;
+  background:
+    repeating-linear-gradient(92deg, rgba(0, 0, 0, 0.07) 0 2px, transparent 2px 7px) padding-box,
+    linear-gradient(180deg, #3a2415 0%, #26160c 60%, #1c100a 100%) padding-box,
+    linear-gradient(135deg, var(--brass-300), var(--brass-600) 45%, var(--brass-400) 70%, var(--brass-700)) border-box;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.65), 0 1px 3px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 220, 160, 0.08), inset 0 0 14px rgba(0, 0, 0, 0.5); }
+[data-mod=matchbar] .mb.s2 { width: 360px; }
+[data-mod=matchbar] .mb.s4 { width: 400px; }
+[data-mod=matchbar] .mb.noanim { animation: none; }
+/* one short heavy settle, no overshoot, then nothing moves */
+@keyframes mb-drop { from { transform: translateY(-30px); opacity: 0; } 55% { opacity: 1; } to { transform: none; opacity: 1; } }
+
+[data-mod=matchbar] .hd { font-family: var(--font-title); font-weight: 600; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--brass-300); text-align: center; padding: 1px 0 4px; margin-bottom: 2px; white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85); border-bottom: 1px solid rgba(0, 0, 0, 0.7); box-shadow: 0 1px 0 rgba(227, 196, 138, 0.12); }
+[data-mod=matchbar] .team + .team { margin-top: 3px; padding-top: 3px; border-top: 1px solid rgba(0, 0, 0, 0.7); box-shadow: 0 -1px 0 rgba(227, 196, 138, 0.1); }
+[data-mod=matchbar] .th { display: flex; justify-content: space-between; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-dim); line-height: 14px; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8); }
+[data-mod=matchbar] .team.mine .tl { color: var(--brass-400); }
+
+/* row grid: pip | name | civ | elo */
+[data-mod=matchbar] .row { display: grid; align-items: center; min-width: 0; position: relative;
+  grid-template-columns: 10px minmax(0, 1fr) 66px 34px; column-gap: 6px; height: 17px; padding: 0 3px 0 5px;
+  font-size: 12px; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85); }
+[data-mod=matchbar] .nm { min-width: 0; overflow: hidden; white-space: nowrap; color: var(--ivory-200); }
+[data-mod=matchbar] .civ { min-width: 0; overflow: hidden; white-space: nowrap; color: var(--text-dim); font-size: 11px; }
+[data-mod=matchbar] .elo { text-align: right; color: var(--brass-300); font-weight: 500; }
+
+/* player-colour pip: enamel dot, colour from colorHex, neutral drop shadow only */
+[data-mod=matchbar] .pip { display: block; width: 10px; height: 10px; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, color-mix(in srgb, var(--c) 62%, #fff 38%) 0 18%, var(--c) 52%, color-mix(in srgb, var(--c) 62%, #000 38%) 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(0, 0, 0, 0.45); }
+
+/* Paul: inlaid brass bar on the left, lit row, bolder name */
+[data-mod=matchbar] .row.me { background: linear-gradient(90deg, rgba(227, 196, 138, 0.16), rgba(227, 196, 138, 0.05)); border-radius: 2px; }
+[data-mod=matchbar] .row.me::before { content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: 2px; border-radius: 1px;
+  background: linear-gradient(180deg, var(--brass-300), var(--brass-600)); }
+[data-mod=matchbar] .row.me .nm { color: #fff4dc; font-weight: 600; }
+
+/* rivets */
+[data-mod=matchbar] .mb::before, [data-mod=matchbar] .mb::after { content: ""; position: absolute; top: 3px; width: 4px; height: 4px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--brass-300), var(--brass-600)); box-shadow: 0 1px 1px rgba(0, 0, 0, 0.8); }
+[data-mod=matchbar] .mb::before { left: 4px; }
+[data-mod=matchbar] .mb::after { right: 4px; }

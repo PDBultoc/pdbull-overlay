@@ -382,14 +382,18 @@ export function mount(root, ctx = {}) {
   root.innerHTML = '<div class="band"><div class="gl"></div></div>';
   const band = root.querySelector('.band'), gl = root.querySelector('.gl');
   let sc = null, busy = false, dead = false, safety = 0, pending = null;
-  const ratings = createRatings();
+  const ratings = ctx.ratings || createRatings(); // overlay.html shares one instance with the match banner
+  let curId = null; // id of the match whose intro is running; 'intro-end' {id} goes out when it stops (played, failed or skipped)
+  const introEnd = (id) => { if (bus && bus.emit) bus.emit('intro-end', { id }); };
 
   const bandOpacity = (tt) => { band.style.opacity = sm(seg(tt, 0, 0.25)) * (1 - sm(seg(tt, 4.95, 5.2))); };
   function finish() {
     clearTimeout(safety); safety = 0;
     band.style.opacity = 0;
     if (sc) { sc.dispose(); sc = null; }
+    const id = curId; curId = null;
     release();
+    if (id !== null && !dead) introEnd(id);
   }
   // a match that arrived while an intro was busy is kept (latest wins) and shown when the current one ends
   function release() {
@@ -400,6 +404,7 @@ export function mount(root, ctx = {}) {
     const a = nextAction(globalThis.sessionStorage, match, busy);
     if (a === 'queue') pending = match;
     else if (a === 'play') play(match);
+    else if (!busy) introEnd(match && match.id); // already played (reload) / invalid and no intro running: the banner may show at once (a duplicate while busy must not release it early)
   }
 
   // RM 1v1 ELO of every player: fetched first (<= 2.5 s, missing ones stay null); panel test ids use sample numbers
@@ -423,9 +428,10 @@ export function mount(root, ctx = {}) {
   async function play(match, opts = {}) {
     if (busy || dead) return false;
     busy = true;
+    curId = match && match.id != null ? match.id : '';
     try {
       const prep = await prepare(match);
-      if (!prep || dead) { release(); return false; }
+      if (!prep || dead) { const id = curId; curId = null; release(); if (id !== null && !dead) introEnd(id); return false; }
       let T = 0, inst = null;
       sc = createScene({
         canvasHost: gl, maxFps: 60, tableOpts: TABLE_OPTS,

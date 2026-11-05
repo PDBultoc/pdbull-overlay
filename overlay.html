@@ -21,6 +21,7 @@ import { MODULES } from './core/registry.js';
 import { startAutoUpdate } from './core/autoupdate.js';
 import { createRemote } from './core/remote.js';
 import { createPoller } from './core/aoe2.js';
+import { createRatings } from './core/ratings.js';
 
 const q = new URLSearchParams(location.search);
 if (q.get('bg') === '1') document.body.classList.add('bg');   // review only, never default
@@ -31,6 +32,7 @@ const bus = createBus({ name: 'pdbull' });
 const settings = createSettings();
 const stage = document.getElementById('stage');
 const live = new Map();
+const ratings = createRatings(); // one RM 1v1 ELO lookup (cache + timeout) shared by the intro and the match banner
 
 function unmountMod(name) {
   const m = live.get(name);
@@ -49,7 +51,7 @@ async function mountMod(name, cfg) {
     const mod = await import('./modules/' + name + '.js');
     if (live.get(name) !== entry) return;
     stage.appendChild(layer);
-    entry.handle = mod.mount(layer, { settings, bus, cfg, latest: () => poller.latest(), reportStatus, playersOverride }) || null;
+    entry.handle = mod.mount(layer, { settings, bus, cfg, latest: () => poller.latest(), reportStatus, playersOverride, ratings }) || null;
   } catch (e) {
     // a module that does not exist yet (or throws) is skipped; the others keep running
     console.warn('module skipped:', name, (e && e.message) || e);
@@ -117,7 +119,22 @@ const DEMO_MATCH = {
   me: DEMO_ME, myTeam: [DEMO_ME],
   enemies: [[{ profileId: 1, name: 'SwedishGoblinTwitch', civ: 'Slavs', colorHex: '#FF0000' }]],
 };
+// ?demo=matchbar1v1 | matchbar4v4: the in-game match banner with a 25-char name (review only; test-* ids use sample ELOs)
+const LONG = 'Ragnar_the_Unstoppable_01';
+const mbP = (id, name, civ, colorHex) => ({ profileId: id, name, civ, colorHex });
+const MB_1V1 = {
+  id: 'test-mb-1v1', running: true, mode: '1v1', map: 'Arabia', me: DEMO_ME, myTeam: [DEMO_ME],
+  enemies: [[mbP(2, LONG, 'Hindustanis', '#d8453a')]],
+};
+const MB_4V4_ME = mbP(551021, 'PDBull', 'Franks', '#3b78e0');
+const MB_4V4 = {
+  id: 'test-mb-4v4', running: true, mode: 'tg', map: 'Black Forest', me: MB_4V4_ME,
+  myTeam: [MB_4V4_ME, mbP(11, 'Frostbite_Nils', 'Vikings', '#4fb15a'), mbP(12, 'kiwi_lancer', 'Persians', '#e0c53a'), mbP(13, 'DukeOfEdinburgh', 'Byzantines', '#3fc3cf')],
+  enemies: [[mbP(21, LONG, 'Hindustanis', '#d8453a'), mbP(22, 'ShadowMonk', 'Mongols', '#a35bd0'), mbP(23, 'ElPollo88', 'Spanish', '#8f8f8f'), mbP(24, 'Teuton_Tony', 'Teutons', '#ec8a2e')]],
+};
 const DEMO_EVENTS = {
+  matchbar1v1: { mod: 'matchbar', type: 'match-running', payload: () => ({ match: MB_1V1 }) },
+  matchbar4v4: { mod: 'matchbar', type: 'match-running', payload: () => ({ match: MB_4V4 }) },
   intro: { mod: 'intro', type: 'match-start', payload: () => ({ type: 'match-start', match: DEMO_MATCH }) },
   sub: { mod: 'alerts', type: 'sub', payload: () => ({ type: 'sub', id: 'test-demo-sub', name: 'IronSquire', tier: '1', months: 1 }) },
   follow: { mod: 'alerts', type: 'follow', payload: () => ({ type: 'follow', id: 'test-demo-follow', name: 'IronSquire' }) },
