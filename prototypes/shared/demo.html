@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>War Table Demo</title>
+<link rel="stylesheet" href="tokens.css">
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+<style>
+  body { background: #000; }
+  body.alpha { background: #3a8f3a; } /* alpha test: anything not drawn must show this green */
+  .label { position: absolute; left: 48px; bottom: 40px; font-size: 26px; }
+  .sheet { position: absolute; inset: 0; display: flex; flex-wrap: wrap; gap: 12px; padding: 16px; background: #2a2018; align-content: flex-start; }
+  .sheet canvas { width: 360px; height: 360px; background: #6b5a44; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="fill" id="gl"></div>
+  <div class="label brass-plate" id="label">PDBull</div>
+</div>
+<script type="module">
+// ?scene=            (none) round-1 chess demo  ?cam=a|b|c|d  ?transform=<0..1>
+//        campaign    campaign map, fog half lifted, village (castle age), tokens, props, candle  ?age=  ?cam=wide|close|low
+//        tokens      close-up of the five tokens + props        ?colour=red|blue|...
+//        ages        the village in all four ages, side by side
+//        tokenart    2D sheet of the painted token faces (no WebGL)
+//        alpha       transparent canvas + bloom: logs canvas alpha at empty and drawn pixels
+// ?shot=1&t=<sec>    stop the clock and render exactly once at t (deterministic screenshots)
+import { createWarTable, makePiece, makeFigurine, fitStage, THREE } from './war-table.js';
+import { makeCampaignMap, makeToken, makeBanner, makeProp, makeVillage, tokenFaceCanvas, TOKEN_TYPES, AGES } from './campaign.js';
+
+fitStage(document.getElementById('stage'));
+const q = new URLSearchParams(location.search);
+const scene = q.get('scene');
+const SHOT = q.get('shot') === '1';
+const T = q.has('t') ? +q.get('t') : 5;
+const gl = document.getElementById('gl');
+const label = document.getElementById('label');
+
+function breathe(wt, look, amp = 1) {
+  const base = wt.camera.position.clone();
+  wt.onTick((dt, t) => {
+    wt.camera.position.set(base.x + Math.sin(t * 0.21) * 0.08 * amp, base.y + Math.sin(t * 0.17) * 0.04 * amp, base.z);
+    wt.camera.lookAt(...look);
+  });
+}
+function finish(wt) {
+  window.wt = wt;
+  if (SHOT) { wt.stop(); wt.advance(T); console.log('shot scene=' + scene + ' t=' + wt.time.toFixed(2)); }
+}
+
+if (scene === 'tokenart') {
+  document.getElementById('stage').remove();
+  const sheet = document.createElement('div'); sheet.className = 'sheet'; document.body.appendChild(sheet);
+  const col = q.get('colour') || 'red';
+  for (const t of TOKEN_TYPES) sheet.appendChild(tokenFaceCanvas(t, col));
+  console.log('tokenart ok');
+} else if (scene === 'campaign') {
+  label.textContent = 'Campaign';
+  const wt = createWarTable(gl, { board: false, candlePos: [-6.3, 0, 3.2], candle: { lightIntensity: 52, height: 2.3 }, exposure: 1.12 });
+  wt.hemi.intensity = 0.22; // a little warm bounce from the parchment so token faces keep their paint
+  const map = makeCampaignMap({ width: 11, depth: 7.4, seed: 3, colour: 'red' });
+  wt.scene.add(map); map.userData.attach(wt);
+  const U = map.userData, F = U.features, Y = U.surfaceY;
+  U.setAge(q.get('age') || 'castle', { duration: 0 });
+  const [vx, vz] = F.village;
+  U.reveal(vx, vz, 2.4, { duration: 0 });
+  U.reveal(F.gold[0][0] + 0.2, F.gold[0][1], 1.3, { duration: 0 });
+  U.reveal(vx - 0.4, vz + 2.0, 1.4, { duration: 0 });
+  const route = [[vx + 0.9, vz + 0.35], [F.bridge[0] - 0.6, F.bridge[1] + 0.05], [F.bridge[0], F.bridge[1]], [F.bridge[0] + 1.2, F.bridge[1] - 0.5], [F.gold[1][0] - 0.3, F.gold[1][1] + 0.3], [F.gold[1][0] + 0.2, F.gold[1][1] - 1.3]];
+  const SPEED = 0.9;
+  U.revealPath(route, 1.2, { speed: SPEED });
+  const place = (obj, x, z, ry = 0) => { obj.position.set(x, Y(x, z), z); obj.rotation.y = ry; wt.scene.add(obj); return obj; };
+  // the scout rides the route; the fog lifts in front of it
+  const scout = place(makeToken('scout', 'red'), ...route[0]);
+  const seg = []; let L = 0; for (let i = 1; i < route.length; i++) { const d = Math.hypot(route[i][0] - route[i - 1][0], route[i][1] - route[i - 1][1]); seg.push([L, d]); L += d; }
+  wt.onTick((dt, t) => {
+    const s = Math.min(L, t * SPEED);
+    let i = seg.findIndex(([a, d]) => s <= a + d); if (i < 0) i = seg.length - 1;
+    const [a, d] = seg[i], k = (s - a) / d, p0 = route[i], p1 = route[i + 1];
+    const x = p0[0] + (p1[0] - p0[0]) * k, z = p0[1] + (p1[1] - p0[1]) * k;
+    scout.position.set(x, Y(x, z) + Math.abs(Math.sin(t * 5.0)) * 0.012, z);
+    scout.rotation.y = -Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
+  });
+  // tokens turned so their painted faces catch the candle and the camera
+  const statics = [
+    place(makeToken('knight', 'red'), vx + 0.35, vz + 1.5),
+    place(makeToken('villager', 'red'), F.gold[0][0] + 0.55, F.gold[0][1] + 0.2),
+    place(makeToken('villager', 'red'), F.gold[0][0] + 0.2, F.gold[0][1] + 0.75),
+    place(makeToken('archer', 'red'), vx - 1.1, vz + 1.05),
+    place(makeToken('monk', 'red'), vx - 0.45, vz + 1.6),
+  ];
+  // table: props (in the candle's pool of light), rival banner, the one chess nod (a king by the candle)
+  const prop = (t, x, z, ry, s = 2.2) => { const p = makeProp(t); p.scale.setScalar(s); p.position.set(x, 0, z); p.rotation.y = ry; wt.scene.add(p); return p; };
+  prop('food', -4.9, 5.0, 0.4);
+  prop('wood', -7.2, 1.2, 0.5);
+  prop('gold', -2.9, 5.0, 0.0, 2.4);
+  prop('stone', -7.0, -1.4, 0.3);
+  const bR = makeBanner('red', { height: 1.5, seed: 5 }); bR.position.set(-6.1, 0, -3.3); wt.scene.add(bR);
+  const bB = makeBanner('blue', { height: 1.5, seed: 9 }); bB.position.set(6.2, 0, -3.5); bB.rotation.y = -0.3; wt.scene.add(bB);
+  wt.onTick((dt, t) => { bR.userData.update(t); bB.userData.update(t + 3); });
+  const king = makePiece('king', 'black'); king.scale.setScalar(0.62); king.position.set(-5.9, 0, 1.5); wt.scene.add(king);
+  const views = {
+    wide: { pos: [4.6, 7.2, 11.6], look: [-1.5, -0.3, 0.7] },
+    close: { pos: [0.9, 1.9, 4.6], look: [-1.5, 0.3, 1.2] },
+    low: { pos: [5.5, 1.6, 6.6], look: [2.2, 0.3, 0.6] },
+  };
+  const v = views[q.get('cam') || 'wide'] || views.wide;
+  wt.camera.position.set(...v.pos); wt.camera.lookAt(...v.look);
+  wt.candle.userData.aimDrips(wt.camera.position);
+  const flame = wt.candle.userData.flameWorldPos();
+  for (const t of statics) t.userData.faceToward(wt.camera.position, wt.camera.position, flame);
+  breathe(wt, v.look);
+  finish(wt);
+} else if (scene === 'tokens') {
+  label.textContent = 'Tokens';
+  const wt = createWarTable(gl, { board: false, candlePos: [-1.6, 0, 1.3], candle: { lightIntensity: 14 }, dust: false });
+  const col = q.get('colour') || 'red';
+  const types = ['scout', 'knight', 'villager', 'archer', 'monk'];
+  types.forEach((t, i) => { const tok = makeToken(t, i % 2 && q.get('mix') ? 'blue' : col); tok.position.set(-1.25 + i * 0.66, 0, (i % 2) * 0.12); tok.rotation.y = 0.18; wt.scene.add(tok); });
+  ['food', 'wood', 'gold', 'stone'].forEach((p, i) => { const pr = makeProp(p, { seed: i + 1 }); pr.position.set(-0.9 + i * 0.75, 0, -0.85); wt.scene.add(pr); });
+  const b = makeBanner(col, { height: 0.95, seed: 2 }); b.position.set(1.85, 0, -0.35); wt.scene.add(b);
+  wt.onTick((dt, t) => b.userData.update(t));
+  const look = [0.15, 0.32, -0.15];
+  wt.camera.fov = 26; wt.camera.updateProjectionMatrix();
+  wt.camera.position.set(0.3, 1.45, 4.6); wt.camera.lookAt(...look);
+  if (q.get('cam') === 'macro') { wt.camera.position.set(-0.55, 0.55, 1.35); wt.camera.lookAt(-0.6, 0.38, 0); }
+  wt.candle.userData.aimDrips(wt.camera.position);
+  finish(wt);
+} else if (scene === 'candle') {
+  label.textContent = 'Candle';
+  const wt = createWarTable(gl, { board: false, candlePos: [0, 0, 0], bloom: q.get('bloom') !== '0', candle: { glow: q.get('glow') !== '0' }, dust: false });
+  wt.camera.position.set(2.0, 1.7, 3.4); wt.camera.lookAt(0, 1.0, 0);
+  if (q.get('h')) wt.candle.userData.setHeight(+q.get('h'));
+  if (q.has('wg')) wt.candle.userData.waxGlow.value = +q.get('wg');
+  if (q.get('dbg')) { const wm = wt.candle.userData.waxMaterial, ob = wm.onBeforeCompile; wm.onBeforeCompile = (sh, r) => { ob(sh, r); sh.fragmentShader = sh.fragmentShader.replace('* uWaxGlow;', '* uWaxGlow; totalEmissiveRadiance = vec3(vWaxY / uWaxTop, 0.0, wD);'); }; wm.customProgramCacheKey = () => 'dbg'; }
+  if (q.has('li')) wt.candle.userData.baseIntensity = +q.get('li');
+  wt.candle.userData.aimDrips(wt.camera.position);
+  finish(wt);
+  const pu = wt.renderer.properties.get(wt.candle.userData.waxMaterial).uniforms;
+  console.log('wax uniforms top=' + pu?.uWaxTop?.value + ' glow=' + pu?.uWaxGlow?.value + ' emissive=' + wt.candle.userData.waxMaterial.emissive.getHexString());
+  if (q.get('src')) { const pr = wt.renderer.properties.get(wt.candle.userData.waxMaterial).currentProgram, c = wt.renderer.getContext();
+    for (const sh of [pr.vertexShader, pr.fragmentShader]) console.log('SRC ' + c.getShaderSource(sh).split('\n').filter((l) => /vWaxY|wD|uWaxTop/.test(l)).join(' | ')); }
+} else if (scene === 'ages') {
+  label.textContent = 'Ages';
+  const wt = createWarTable(gl, { board: false, candlePos: [-5.4, 0, 2.2], candle: { lightIntensity: 60, height: 2.3 } });
+  AGES.forEach((a, i) => { const v = makeVillage({ age: a, colour: 'red' }); v.position.set(-3.6 + i * 2.4, 0, 0); wt.scene.add(v); wt.onTick((dt, t) => v.userData.update(t)); });
+  wt.camera.position.set(0.6, 5.0, 8.2); wt.camera.lookAt(0.3, 0.0, -0.2);
+  finish(wt);
+} else if (scene === 'alpha') {
+  document.body.classList.add('alpha'); label.remove();
+  const wt = createWarTable(gl, { transparent: true, board: false, candlePos: [-1.2, 0, 0.5], dust: false });
+  const tok = makeToken('knight', 'red'); tok.scale.setScalar(3); wt.scene.add(tok);
+  wt.camera.position.set(0, 2.2, 7); wt.camera.lookAt(0, 1, 0);
+  wt.stop(); wt.advance(0.5);
+  const ctx = wt.renderer.getContext(), px = new Uint8Array(4), H = ctx.drawingBufferHeight, W = ctx.drawingBufferWidth;
+  const read = (x, y) => { ctx.readPixels(x, H - 1 - y, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, px); return Array.from(px).join(','); };
+  console.log('alpha corner=' + read(20, 20) + ' edge=' + read(W - 30, H / 2) + ' centre=' + read(W / 2, H * 0.55) + ' nearFlame=' + read(Math.round(W * 0.36), Math.round(H * 0.3)));
+  window.wt = wt;
+} else {
+  const wt = createWarTable(gl, { candlePos: [-5.6, 0, 4.0] });
+  const sq = wt.board.userData.squareToWorld;
+  const order = ['pawn', 'rook', 'knight', 'bishop', 'queen', 'king'];
+  order.forEach((t, i) => {
+    const w = makePiece(t, 'white'); w.position.copy(sq(i + 1, 0)); wt.scene.add(w);
+    const b = makePiece(t, 'black'); b.position.copy(sq(i + 1, 7)); wt.scene.add(b);
+  });
+  const figs = [['cavalier', 'white', 1, 3], ['archer', 'white', 3, 3], ['monk', 'white', 5, 3], ['castle', 'black', 6.6, 2.4], ['trebuchet', 'white', 4.4, 4.5]];
+  for (const [t, s, f, r] of figs) { const g = makeFigurine(t, s); g.position.copy(sq(f, r)); wt.scene.add(g); }
+  const cam = q.get('cam') || 'a';
+  const views = {
+    a: { pos: [7.2, 7.0, 12.8], look: [-0.6, 0.4, 0.2] },
+    b: { pos: [4.2, 1.55, 6.2], look: [-0.4, 0.75, 0.6], dof: true },
+    c: { pos: [0.4, 1.9, 5.0], look: [-0.3, 0.75, 0.3] },
+    d: { pos: [6.2, 2.3, 8.0], look: [3.3, 0.8, 3.3] },
+  };
+  const v = views[cam] || views.a;
+  wt.camera.position.set(...v.pos); wt.camera.lookAt(...v.look);
+  if (v.dof) { const dof = wt.enableDOF({ aperture: 0.0025, maxblur: 0.006 }); dof.setFocus(new THREE.Vector3(...sq(3, 3).toArray())); }
+  breathe(wt, v.look);
+  if (q.get('transform')) {
+    const from = makePiece('knight', 'white'); from.position.copy(sq(7, 0)); wt.scene.add(from);
+    const to = makeFigurine('cavalier', 'white'); to.position.copy(sq(7, 0)); to.visible = false; wt.scene.add(to);
+    setTimeout(() => {
+      wt.transform(from, to).then(() => console.log('transform done t=' + wt.time.toFixed(2)), (e) => console.log('transform error ' + e));
+      wt.advance(1.5 * +q.get('transform'));
+    }, 300);
+  }
+  if (q.get('debug')) wt.scene.traverse((o) => {
+    const a = o.geometry?.attributes?.position; if (!a) return;
+    for (let i = 0; i < a.array.length; i++) if (!Number.isFinite(a.array[i])) { console.log('NaN geometry in', o.parent?.userData?.type || o.type, o.parent?.userData?.kind); break; }
+  });
+  window.wt = wt;
+}
+</script>
+</body>
+</html>

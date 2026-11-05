@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDBull BRB</title>
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="brb.css">
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+</head>
+<body class="dark">
+<div class="stage" id="stage">
+  <div class="fill" id="gl"></div>
+  <div class="smoke-count" id="smokeCount" hidden></div>
+  <div class="follower" id="follower">
+    <div class="f-label">Last follower</div>
+    <div class="f-name" id="followerName">—</div>
+  </div>
+  <div class="chat" id="chat"></div>
+</div>
+<div class="panel" id="panel">
+  <div class="row"><button class="on" disabled>B2 · Candle</button></div>
+  <div class="row"><button id="tFollow">New follower</button><button id="tChat">Chat message</button></div>
+</div>
+<script type="module" src="brb.js"></script>
+</body>
+</html>

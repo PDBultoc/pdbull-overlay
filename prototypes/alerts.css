@@ -1,0 +1,46 @@
+/* F Alerts - preview page chrome + text layers */
+.stage .game { position: absolute; inset: 0; width: 1920px; height: 1080px; display: block; object-fit: fill; }
+body.nobg .stage .game { display: none; }
+
+.cam {
+  left: 8px; top: 755px; width: 320px; height: 180px;
+  background: linear-gradient(160deg, rgba(20, 12, 8, 0.55), rgba(8, 5, 3, 0.7));
+}
+.cam span {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  font: 600 15px var(--font-title); letter-spacing: 0.4em; color: rgba(227, 196, 138, 0.35);
+}
+
+#band { position: absolute; left: 625px; top: 40px; width: 1050px; height: 640px; pointer-events: none; }
+#band .fill { opacity: 0; filter: drop-shadow(0 14px 14px rgba(0, 0, 0, 0.5)); }
+#txt { position: absolute; inset: 0; }
+#txt > * { position: absolute; }
+
+/* shared text styles */
+.t-name { font-family: var(--font-title); font-weight: 600; color: var(--ivory-100); letter-spacing: 0.08em;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.9), 0 0 22px rgba(0, 0, 0, 0.75); white-space: nowrap; }
+.t-sub { font-family: var(--font-serif); font-style: italic; font-weight: 500; color: var(--ivory-300);
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.9), 0 0 18px rgba(0, 0, 0, 0.8); white-space: nowrap; }
+.t-kicker { font-family: var(--font-title); font-weight: 600; color: var(--brass-300); letter-spacing: 0.42em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 14px rgba(0, 0, 0, 0.8); white-space: nowrap; }
+.t-hair { height: 2px; background: linear-gradient(90deg, transparent, var(--brass-400), transparent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+
+/* bits text (HTML, beside the tray) */
+.b-kicker { top: 92px; font: 600 17px var(--font-title); letter-spacing: 0.42em; color: var(--brass-300);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 14px rgba(0, 0, 0, 0.8); white-space: nowrap; }
+.b-name { top: 118px; font-family: var(--font-title); font-weight: 600; font-size: 54px; line-height: 1.1; letter-spacing: 0.06em; color: var(--ivory-100);
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.9), 0 0 22px rgba(0, 0, 0, 0.75); white-space: nowrap; }
+.b-amt { top: 196px; font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 40px; line-height: 1; color: var(--ivory-300);
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.9), 0 0 18px rgba(0, 0, 0, 0.8); white-space: nowrap; }
+.b-amt span { font-style: normal; font-family: var(--font-title); font-size: 38px; color: var(--brass-300); font-variant-numeric: lining-nums; letter-spacing: 0.04em; }
+.b-hair { top: 182px; width: 420px; background: linear-gradient(90deg, var(--brass-400), transparent); }
+
+/* control panel (preview only, hidden with ?shot=1) */
+#panel { position: fixed; right: 10px; bottom: 10px; z-index: 9; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px;
+  background: rgba(13, 8, 6, 0.88); border: 1px solid rgba(201, 165, 106, 0.4); border-radius: 4px; font: 500 12px var(--font-ui); color: var(--text-light); }
+#panel .row { display: flex; gap: 6px; }
+#panel button { font: 500 12px var(--font-ui); color: var(--ivory-100); background: var(--walnut-700); border: 1px solid var(--brass-600); border-radius: 3px; padding: 5px 9px; cursor: pointer; }
+#panel button:hover { background: var(--walnut-600); }
+#panel button.on { background: var(--brass-600); color: #fff; }
+body.shot #panel { display: none; }

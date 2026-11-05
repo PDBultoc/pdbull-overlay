@@ -1,0 +1,95 @@
+/* D1 Camera frame + Chat — walnut & brass (round 2: single variant) */
+.stage .bg { position: absolute; inset: 0; background: #0a0705 url("shared/game.webp") center / 1920px 1080px no-repeat; }
+body.nobg .stage .bg { display: none; }
+
+/* ---------- placeholder webcam ---------- */
+.cam { position: absolute; left: 8px; top: 755px; width: 322px; height: 180px; box-sizing: border-box; }
+.cam-window { position: absolute; inset: 0; overflow: hidden; box-sizing: border-box; background: #14100d; }
+.webcam { position: absolute; inset: 0;
+  background: radial-gradient(120% 120% at 30% 15%, #3a2c22 0%, #20170f 55%, #120d09 100%); }
+.wc-light { position: absolute; inset: 0;
+  background: radial-gradient(60% 80% at 8% 20%, rgba(255, 190, 110, 0.20), transparent 70%); }
+.wc-head { position: absolute; left: 50%; top: 22%; width: 22%; height: 38%; transform: translateX(-50%);
+  border-radius: 50% 50% 46% 46%;
+  background: radial-gradient(70% 70% at 35% 30%, #4a382b, #1c130d 80%); filter: blur(2.5px); }
+.wc-shoulders { position: absolute; left: 50%; top: 62%; width: 62%; height: 70%; transform: translateX(-50%);
+  border-radius: 50% 50% 0 0 / 60% 60% 0 0;
+  background: radial-gradient(80% 90% at 40% 10%, #3b2c21, #170f0a 85%); filter: blur(3px); }
+.wc-grain { position: absolute; inset: 0; box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.55); }
+.cam .k { display: none; }
+
+/* ---------- chat container ---------- */
+.chat { position: absolute; left: 1600px; width: 312px; bottom: var(--chat-bottom, 190px); /* 1080-890, +24 px per player beyond 2 (?players=N) */
+  display: flex; flex-direction: column; justify-content: flex-end; pointer-events: none; }
+.chat .m { display: grid; grid-template-rows: 0fr; opacity: 0;
+  transition: grid-template-rows 0.7s var(--ease-heavy), opacity 0.6s ease; }
+.chat .m.in { grid-template-rows: 1fr; opacity: 1; }
+.chat .m.out { grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.9s ease 0.2s, opacity 0.8s ease; }
+.chat .m.seed { transition: none; }
+.chat .m > .inner { min-height: 0; overflow: hidden; padding: 3px 6px 3px 4px; }
+.chat .msg { position: relative; font-family: var(--font-ui); font-size: 17px; line-height: 1.38; color: var(--text-light);
+  word-wrap: break-word; overflow-wrap: anywhere; }
+.chat .nm { font-weight: 600; }
+.chat .tx { font-weight: 400; }
+.chat img.emote { height: 24px; width: 24px; vertical-align: -6px; margin: 0 1px; }
+
+/* =====================================================================
+   VARIANT 1 — Walnut & brass thin frames
+   ===================================================================== */
+body.v1 .cam { /* uses tokens walnut-frame look */
+  border: 6px solid transparent;
+  border-image: linear-gradient(135deg, #5d3c23 0%, #2b1a0f 34%, #4b2f1c 62%, #1f130b 100%) 1;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(0, 0, 0, 0.7),
+              inset 0 0 0 1px rgba(227, 196, 138, 0.22);
+}
+body.v1 .cam-window { inset: 0; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.8), inset 0 0 22px rgba(0, 0, 0, 0.55); }
+body.v1 .cam::after { /* inner brass hairline */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(201, 165, 106, 0.55); }
+body.v1 .cam .k { display: block; position: absolute; width: 20px; height: 20px;
+  background: linear-gradient(135deg, var(--brass-300), var(--brass-500) 48%, var(--brass-700));
+  -webkit-mask: linear-gradient(#000 0 0) top/100% 4px no-repeat, linear-gradient(#000 0 0) left/4px 100% no-repeat;
+          mask: linear-gradient(#000 0 0) top/100% 4px no-repeat, linear-gradient(#000 0 0) left/4px 100% no-repeat;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8)); z-index: 3; }
+body.v1 .cam .k-tl { left: -9px; top: -9px; }
+body.v1 .cam .k-tr { right: -9px; top: -9px; transform: scaleX(-1); }
+body.v1 .cam .k-bl { left: -9px; bottom: -9px; transform: scaleY(-1); }
+body.v1 .cam .k-br { right: -9px; bottom: -9px; transform: scale(-1, -1); }
+
+body.v1 .chat .msg { padding: 7px 12px 8px 13px; border-radius: 3px;
+  background: linear-gradient(90deg, rgba(34, 21, 13, 0.90), rgba(22, 13, 8, 0.82));
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 220, 160, 0.07), inset 0 0 0 1px rgba(201, 165, 106, 0.14); }
+body.v1 .chat .msg::before { content: ""; position: absolute; left: 0; top: 5px; bottom: 5px; width: 2px;
+  background: linear-gradient(180deg, var(--brass-300), var(--brass-600)); border-radius: 2px; }
+body.v1 .chat .msg.role-b::before { width: 3px; background: linear-gradient(180deg, #f1d9a4, #b08a4f); }
+body.v1 .chat .msg.role-b { background: linear-gradient(90deg, rgba(58, 38, 20, 0.93), rgba(30, 18, 10, 0.86));
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(227, 196, 138, 0.38); }
+body.v1 .chat .badge { display: inline-block; font-family: var(--font-title); font-size: 10px; font-weight: 600; letter-spacing: 0.12em;
+  padding: 1px 5px 0; margin-right: 6px; border-radius: 2px; vertical-align: 2px; }
+body.v1 .chat .badge.b { background: linear-gradient(180deg, #e2c590, #a37f48); color: var(--ink-on-brass); }
+body.v1 .chat .badge.mod { background: transparent; color: #9fb48c; box-shadow: inset 0 0 0 1px rgba(159, 180, 140, 0.55); }
+
+/* v1 / v2 entrance: gentle rise */
+body.v1 .chat .m.in:not(.seed) .msg { animation: rise 0.7s var(--ease-heavy) both; }
+@keyframes rise { from { transform: translateY(16px); } to { transform: none; } }
+
+/* ---------- preview control panel (hidden with ?shot=1) ---------- */
+.panel { position: fixed; right: 10px; bottom: 10px; z-index: 50; display: flex; gap: 6px; padding: 6px;
+  background: rgba(10, 7, 5, 0.85); border: 1px solid rgba(201, 165, 106, 0.4); border-radius: 4px;
+  font: 500 12px var(--font-ui); }
+.panel a, .panel button { color: var(--text-light); background: #2a1a10; border: 1px solid #5a3a22; border-radius: 3px;
+  padding: 4px 9px; text-decoration: none; font: inherit; cursor: pointer; }
+.panel a.on { background: var(--brass-500); color: var(--ink-on-brass); }
+body.shot .panel { display: none; }
+
+/* debug zoom for review shots (?zoom=cam|chat) */
+body.zoomcam .stage { transform: translate(-50%, -50%) translate(2370px, -915px) scale(3); }
+body.zoomchat .stage { transform: translate(-50%, -50%) translate(-1353px, -136px) scale(1.7); }
+
+/* webcam silhouette v2: head + neck + shoulders read as one figure */
+.wc-head { left: 50%; top: 17%; width: 19%; height: 42%; border-radius: 48% 48% 44% 44% / 52% 52% 48% 48%;
+  background: radial-gradient(75% 70% at 38% 30%, #5a4433, #2a1d14 85%); filter: blur(1.6px); }
+.wc-neck { position: absolute; left: 50%; top: 50%; width: 9%; height: 18%; transform: translateX(-50%);
+  background: linear-gradient(180deg, #2c1f16, #3a2b1f); filter: blur(1.5px); }
+.wc-shoulders { top: 62%; width: 58%; height: 80%; background: radial-gradient(80% 90% at 42% 8%, #4a382a, #1a110b 88%); filter: blur(2px); }
+

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Camera and Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="camchat.css">
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="bg" id="bg"></div>
+
+  <!-- camera frame: x 8-330, y 755-935 -->
+  <div class="cam" id="cam">
+    <div class="cam-window">
+      <div class="webcam" aria-hidden="true">
+        <div class="wc-light"></div>
+        <div class="wc-head"></div>
+        <div class="wc-neck"></div><div class="wc-shoulders"></div>
+        <div class="wc-grain"></div>
+      </div>
+    </div>
+    <i class="k k-tl"></i><i class="k k-tr"></i><i class="k k-bl"></i><i class="k k-br"></i>
+  </div>
+
+  <!-- chat: x 1600-1912, bottom y 890, grows up -->
+  <div class="chat" id="chat"></div>
+</div>
+
+<div class="panel" id="panel">
+  <button id="btn-test">Test message</button>
+  <button id="btn-bg">Background</button>
+</div>
+
+<script type="module" src="camchat.js"></script>
+</body>
+</html>

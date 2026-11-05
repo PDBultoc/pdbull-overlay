@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDBull overlay - F Alerts</title>
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap">
+<link rel="stylesheet" href="alerts.css">
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div class="stage" id="stage">
+  <img class="game" id="game" src="shared/game.webp" alt="">
+  <!-- camera frame stub (x 8-330, y 755-935): flashes amber as the alert echo -->
+  <div class="cam walnut-frame" id="cam"><i class="corner-bl"></i><i class="corner-br"></i><span>CAMERA</span></div>
+  <!-- alert band (x 625-1675) -->
+  <div id="band">
+    <div class="fill" id="gl"></div>
+    <div id="txt"></div>
+  </div>
+</div>
+<div id="panel">
+  <b>F3 Alerts</b>
+  <span class="row"><button data-a="follow">Test follow</button><button data-a="sub">Test sub</button><button data-a="gift" data-gift="5">Test gift 5</button></span>
+  <span class="row"><button data-a="bits" data-bits="50">Test bits 50</button><button data-a="bits" data-bits="500">500</button><button data-a="bits" data-bits="1500">1500</button></span>
+  <span class="row"><button data-a="donation">Test donation</button></span>
+</div>
+<script type="module" src="alerts.js"></script>
+</body>
+</html>

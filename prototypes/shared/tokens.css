@@ -1,0 +1,107 @@
+/* PDBull overlay — shared design tokens ("Masa de razboi").
+   Import with: <link rel="stylesheet" href="shared/tokens.css"> */
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&display=swap");
+
+:root {
+  /* walnut */
+  --walnut-950: #0d0806;
+  --walnut-900: #1a100a;
+  --walnut-800: #2a1a10;
+  --walnut-700: #3b2416;
+  --walnut-600: #4f321f;
+  --walnut-500: #6a4429;
+  /* ivory */
+  --ivory-100: #f4ecdc;
+  --ivory-200: #e8dcc4;
+  --ivory-300: #d6c6a6;
+  --ivory-400: #b9a682;
+  /* ebony */
+  --ebony-900: #0b0908;
+  --ebony-800: #15110e;
+  --ebony-700: #221b16;
+  /* brass + muted gold */
+  --brass-300: #e3c48a;
+  --brass-400: #c9a56a;
+  --brass-500: #a8844e;
+  --brass-600: #7d6036;
+  --brass-700: #57411f;
+  --gold-muted: #b89a5e;
+  /* single vivid accent: amber flame (big moments only) */
+  --flame: #ffb347;
+  --flame-glow: rgba(255, 179, 71, 0.45);
+
+  --ink-on-brass: #2a1c08;
+  --text-light: #efe6d4;
+  --text-dim: #a8987c;
+
+  --font-title: "Cinzel", "Cormorant Garamond", Georgia, serif;
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --font-ui: "Inter", "Source Sans 3", system-ui, sans-serif;
+
+  --frame-w: 6px;          /* thin walnut edge */
+  --corner: 18px;          /* brass corner size */
+  --shadow-soft: 0 6px 24px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.6);
+  --ease-heavy: cubic-bezier(0.22, 0.8, 0.24, 1);
+}
+
+/* ---------- 1920x1080 stage that scales to any window ---------- */
+html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+body.dark { background: #000; }
+.stage {
+  position: absolute; left: 50%; top: 50%;
+  width: 1920px; height: 1080px;
+  transform-origin: 50% 50%;
+  transform: translate(-50%, -50%) scale(var(--stage-scale, 1));
+  overflow: hidden;
+}
+.stage > canvas, .stage .fill { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* ---------- thin walnut frame with brass corners ---------- */
+.walnut-frame {
+  position: absolute; box-sizing: border-box;
+  border: var(--frame-w) solid var(--walnut-700);
+  border-image: linear-gradient(135deg, #5a3a22 0%, #2a1a10 35%, #4a2e1b 60%, #20140c 100%) 1;
+  box-shadow: var(--shadow-soft), inset 0 0 0 1px rgba(227, 196, 138, 0.18), inset 0 0 18px rgba(0, 0, 0, 0.6);
+}
+.walnut-frame::before, .walnut-frame::after,
+.walnut-frame > .corner-bl, .walnut-frame > .corner-br {
+  content: ""; position: absolute; width: var(--corner); height: var(--corner);
+  background:
+    linear-gradient(135deg, var(--brass-300), var(--brass-500) 45%, var(--brass-700) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) top/100% 4px no-repeat, linear-gradient(#000 0 0) left/4px 100% no-repeat;
+          mask: linear-gradient(#000 0 0) top/100% 4px no-repeat, linear-gradient(#000 0 0) left/4px 100% no-repeat;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.7));
+}
+.walnut-frame::before { top: calc(-1 * var(--frame-w) - 2px); left: calc(-1 * var(--frame-w) - 2px); }
+.walnut-frame::after  { top: calc(-1 * var(--frame-w) - 2px); right: calc(-1 * var(--frame-w) - 2px); transform: scaleX(-1); }
+.walnut-frame > .corner-bl { bottom: calc(-1 * var(--frame-w) - 2px); left: calc(-1 * var(--frame-w) - 2px); transform: scaleY(-1); }
+.walnut-frame > .corner-br { bottom: calc(-1 * var(--frame-w) - 2px); right: calc(-1 * var(--frame-w) - 2px); transform: scale(-1, -1); }
+
+/* ---------- brass plate with engraved text ---------- */
+.brass-plate {
+  display: inline-block; position: relative;
+  padding: 14px 40px 12px;
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, rgba(0, 0, 0, 0.03) 1px 3px),
+    linear-gradient(180deg, #e2c590 0%, #c49e62 38%, #a37f48 70%, #8a6a3b 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 240, 200, 0.55), inset 0 -1px 0 rgba(60, 40, 15, 0.6),
+    inset 0 0 0 1px rgba(90, 66, 30, 0.5), 0 3px 10px rgba(0, 0, 0, 0.6);
+  font-family: var(--font-title); font-weight: 600; letter-spacing: 0.12em;
+  color: var(--ink-on-brass);
+  /* engraved: dark cut with a light lower lip */
+  text-shadow: 0 1px 0 rgba(255, 236, 190, 0.55), 0 -1px 0 rgba(40, 26, 8, 0.45);
+}
+.brass-plate::before, .brass-plate::after { /* screw heads */
+  content: ""; position: absolute; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f3dcae, #8d6c3b 60%, #4d3817);
+  box-shadow: inset 0 0 0 1px rgba(40, 26, 8, 0.5);
+}
+.brass-plate::before { left: 12px; }
+.brass-plate::after { right: 12px; }
+
+.engraved-title { font-family: var(--font-title); letter-spacing: 0.14em; color: var(--ivory-200);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8); }
+.chat-text { font-family: var(--font-ui); font-size: 20px; line-height: 1.35; color: var(--text-light); }
+.flame-text { color: var(--flame); text-shadow: 0 0 18px var(--flame-glow); }
