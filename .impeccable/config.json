@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-11-05T10:34:29.038Z",
+        "reason": "Agent: Inter is the UI face of the approved round-2 token set (shared/tokens.css), paired with Cinzel/Cormorant titles"
+      }
+    ]
+  }
+}
