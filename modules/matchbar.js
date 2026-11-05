@@ -2,7 +2,7 @@
 // Bus: 'match-start' {match} (shown after 'intro-end' or a 12 s fallback), 'match-running' {match|null} (shown at once when no
 // intro is pending; null / finished hides), 'match-end' (hides), 'intro-end' {id}. Rows render with "—" first and are filled
 // when the shared ratings lookup (ctx.ratings) resolves. Settings: modules.matchbar.enabled (read by overlay.html).
-import { barFromMatch, eloText } from '../core/matchbarlogic.js';
+import { barFromMatch, eloText, createBannerFlow } from '../core/matchbarlogic.js';
 import { introPlayerIds } from '../core/intrologic.js';
 import { createRatings } from '../core/ratings.js';
 
@@ -73,7 +73,7 @@ export function mount(root, ctx = {}) {
   const ratings = ctx.ratings || createRatings();
   const slot = el('div', 'slot');
   root.append(slot);
-  let shownKey = null, waiting = null, pendingMatch = null, fallback = 0, dead = false, gen = 0;
+  let shownKey = null, dead = false, gen = 0;
 
   const enabled = () => !(ctx.settings && ctx.settings.get && ctx.settings.get().modules?.matchbar?.enabled === false);
   const keyOf = (m) => (m && m.id != null ? String(m.id) : null);
@@ -83,7 +83,6 @@ export function mount(root, ctx = {}) {
     slot.replaceChildren();
     shownKey = null;
   }
-  function clearWait() { clearTimeout(fallback); fallback = 0; waiting = null; }
 
   async function show(match) {
     if (dead || !match || match.running === false || !enabled()) return;
@@ -112,30 +111,13 @@ export function mount(root, ctx = {}) {
     });
   }
 
+  const flow = createBannerFlow({ show, hide, fallbackMs: INTRO_FALLBACK_MS });
   const offs = [];
   if (bus && bus.on) {
-    offs.push(bus.on('match-start', (p) => {
-      const m = p && p.match;
-      if (!m) return;
-      if (keyOf(m) != null && keyOf(m) === shownKey) return;
-      clearWait();
-      waiting = keyOf(m) || '?';
-      fallback = setTimeout(() => { clearWait(); show(m); }, INTRO_FALLBACK_MS);
-      pendingMatch = m;
-    }));
-    offs.push(bus.on('intro-end', () => {
-      if (!waiting) return;
-      const m = pendingMatch; pendingMatch = null;
-      clearWait();
-      show(m);
-    }));
-    offs.push(bus.on('match-running', (p) => {
-      const m = p && p.match;
-      if (!m || m.running === false) { if (!waiting) hide(); return; }
-      if (waiting) return; // an intro is pending: the banner follows it
-      show(m);
-    }));
-    offs.push(bus.on('match-end', () => { clearWait(); hide(); }));
+    offs.push(bus.on('match-start', (p) => { const m = p && p.match; if (m && keyOf(m) != null && keyOf(m) === shownKey) return; flow.start(m); }));
+    offs.push(bus.on('intro-end', (p) => flow.introEnd(p && p.id)));
+    offs.push(bus.on('match-running', (p) => flow.running(p && p.match)));
+    offs.push(bus.on('match-end', () => flow.end()));
   }
 
   const initial = ctx.latest ? ctx.latest() : null;
@@ -143,7 +125,7 @@ export function mount(root, ctx = {}) {
 
   return {
     unmount() {
-      dead = true; clearWait(); gen++;
+      dead = true; flow.clear(); gen++;
       for (const off of offs) { try { if (off) off(); } catch (e) { /* ignore */ } }
       root.replaceChildren();
     },

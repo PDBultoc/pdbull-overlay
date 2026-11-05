@@ -83,3 +83,51 @@ test('barFromMatch: >4 per team capped, hidden civs blank, null match -> null', 
   assert.equal(b.teams[0].players[0].civ, '');
   assert.equal(barFromMatch(null, new Map()), null);
 });
+
+// ---- show/hide flow (injected timer, no real clock) ----
+import { createBannerFlow } from '../core/matchbarlogic.js';
+function rig() {
+  const log = []; let timers = []; let n = 0;
+  const flow = createBannerFlow({
+    show: (m) => log.push('show:' + m.id), hide: () => log.push('hide'), fallbackMs: 12000,
+    setTimer: (fn, ms) => { const t = { id: ++n, fn, ms }; timers.push(t); return t.id; },
+    clearTimer: (id) => { timers = timers.filter((t) => t.id !== id); },
+  });
+  return { flow, log, fire: () => { const t = timers.shift(); if (t) t.fn(); }, timers: () => timers };
+}
+const M = (id) => ({ id, running: true });
+
+test('flow: match-start then intro-end shows; the 12 s timer is cleared', () => {
+  const r = rig();
+  r.flow.start(M(1)); assert.deepEqual(r.log, []); assert.equal(r.timers()[0].ms, 12000);
+  r.flow.introEnd(1); assert.deepEqual(r.log, ['show:1']); assert.equal(r.timers().length, 0);
+});
+test('flow: intro-end BEFORE match-start (skip path, intro mounts first) shows at once', () => {
+  const r = rig();
+  r.flow.introEnd(7); r.flow.start(M(7));
+  assert.deepEqual(r.log, ['show:7']); assert.equal(r.timers().length, 0);
+});
+test('flow: no intro-end ever -> 12 s fallback shows, pending cleared (a later intro-end shows nothing more)', () => {
+  const r = rig();
+  r.flow.start(M(2)); r.fire(); assert.deepEqual(r.log, ['show:2']);
+  r.flow.introEnd(2); assert.deepEqual(r.log, ['show:2']);
+});
+test('flow: intro-end of another id does not release the waiting match (queued second match)', () => {
+  const r = rig();
+  r.flow.start(M(1)); r.flow.start(M(2));
+  r.flow.introEnd(1); assert.deepEqual(r.log, []);
+  r.flow.introEnd(2); assert.deepEqual(r.log, ['show:2']);
+});
+test('flow: match-running shows at once without a pending intro, is held while one is pending', () => {
+  const r = rig();
+  r.flow.running(M(3)); assert.deepEqual(r.log, ['show:3']);
+  const q = rig(); q.flow.start(M(4)); q.flow.running(M(4)); assert.deepEqual(q.log, []);
+});
+test('flow: match-running null / finished hides (not while waiting); match-end hides and cancels the wait', () => {
+  const r = rig();
+  r.flow.running(M(3)); r.flow.running(null); r.flow.running({ id: 3, running: false });
+  assert.deepEqual(r.log, ['show:3', 'hide', 'hide']);
+  const w = rig(); w.flow.start(M(5)); w.flow.running(null); assert.deepEqual(w.log, []);
+  w.flow.end(); assert.deepEqual(w.log, ['hide']); assert.equal(w.timers().length, 0);
+  w.flow.introEnd(5); assert.deepEqual(w.log, ['hide']);
+});
