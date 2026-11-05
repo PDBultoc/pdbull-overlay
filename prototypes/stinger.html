@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDBull stinger</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0806; color: #e9dcc2; font-family: var(--font-ui, sans-serif); overflow: hidden; }
+  .stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: 0 0; }
+  .stage canvas { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+  .bg-check { background: repeating-conic-gradient(#3a3a3a 0 25%, #555 0 50%) 0 0 / 48px 48px; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 10px; align-items: center; padding: 8px 14px;
+         background: rgba(13,8,6,.88); font-size: 14px; z-index: 5; }
+  .bar button, .bar a { background: #2a1a10; color: #ffcf86; border: 1px solid #57411f; border-radius: 4px; padding: 4px 10px; cursor: pointer; text-decoration: none; font: inherit; }
+  .bar button.on { background: #57411f; }
+  .tl { position: relative; flex: 1; height: 10px; background: #2a1a10; border-radius: 5px; }
+  .tl .p { position: absolute; top: 0; bottom: 0; left: 0; background: #a8844e; border-radius: 5px; }
+  .tl .cut { position: absolute; top: -6px; bottom: -6px; width: 2px; background: #ff5a3a; }
+  .info { min-width: 220px; font-variant-numeric: tabular-nums; }
+  body.shot .bar { display: none; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <canvas id="under" width="1920" height="1080"></canvas>
+  <canvas id="fx" width="1920" height="1080"></canvas>
+</div>
+<div class="bar" id="bar">
+  <a href="?v=a">A · Seal</a><a href="?v=b">B · Scroll</a><a href="?v=c">C · Smoke</a>
+  <button id="play">Play ▶ (space)</button>
+  <button id="bgBtn">Background: demo</button>
+  <button id="sndBtn">Sound: off</button>
+  <div class="tl" id="tl"><div class="p" id="tlp"></div><div class="cut" id="tlcut"></div></div>
+  <span class="info" id="info"></span>
+</div>
+<script type="module" src="stinger.js"></script>
+</body>
+</html>

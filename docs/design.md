@@ -101,3 +101,10 @@ Chosen: **A1 · B2 · D1 · E3 · F3**. Other variants are dropped.
    | Bits | gold coins falling onto a brass tray; <100 a few coins, 100–999 a pile, 1000+ a chest opening | coin clinks | medium-large, 5–8 s | "Name · 500 bits" |
    | Donation (Streamlabs) | sealed letter: wax breaks, parchment unrolls, message written in ink | paper unfolding, ink | largest, 8–12 s, longer for long messages | "Name · $10" + donor message |
    Sounds: synthesised WebAudio placeholders for the prototype, off unless ?sound=1.
+
+## ROUND 3 — Paul's picks (2026-11-05)
+1. **Scene transition (OBS Stinger): B · Parchment scroll** — a walnut roller with brass caps unrolls our inked campaign map over the whole screen, then rolls back up. 1900 ms, transition point 1000 ms, with sound (rustle, roller rumble, soft thump). Used on every scene switch; replaces the old Streamlabs stinger. Delivered as `.webm` VP9 with alpha.
+2. **End scene "Thanks for watching": 1 · Candle out** — the candle gutters and goes out, the wick keeps an ember and a thin smoke thread, the room dims; "Thanks for watching" / "See you next time" is inked on a letter. Chat stays visible like BRB. Replaces the OBS scene "Ending Soon"; "Intermission" unchanged.
+3. **Music: none.** Only generated ambience (candle crackle, hearth fire, quill on parchment) on Starting / BRB / End, on/off + volume in the dock.
+4. **In-game match banner:** top-right under the menu buttons, after the intro until match end; every player (up to 4v4) with colour, name, RM 1v1 ELO, civ (text), map name, team average ELO. Variant: **1 · Brass plaque** (walnut board, thin brass rim, engraved rows, team blocks stacked).
+Plan: `docs/plans/2026-11-05-round3-production-plan.md`.

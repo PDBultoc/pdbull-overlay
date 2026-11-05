@@ -8,6 +8,78 @@
         "value": "inter",
         "createdAt": "2026-11-05T10:34:29.038Z",
         "reason": "Agent: Inter is the UI face of the approved round-2 token set (shared/tokens.css), paired with Cinzel/Cormorant titles"
+      },
+      {
+        "rule": "clipped-overflow-container",
+        "value": "*",
+        "files": [
+          "prototypes/stinger.html"
+        ],
+        "createdAt": "2026-11-05T13:01:07.822Z",
+        "reason": "Claude: dev harness, body overflow hidden around a scaled fixed 1920x1080 stage; no popovers exist"
+      },
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "prototypes/stinger.html"
+        ],
+        "createdAt": "2026-11-05T13:01:08.116Z",
+        "reason": "Claude: dev-only test harness for OBS stinger prototypes, never on stream"
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "prototypes/stinger-sheet.html"
+        ],
+        "createdAt": "2026-11-05T13:01:55.364Z",
+        "reason": "Claude: internal review contact sheet, never on stream; glow comes from shared tokens.css shadow token"
+      },
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "prototypes/stinger-sheet.html"
+        ],
+        "createdAt": "2026-11-05T13:01:55.641Z",
+        "reason": "Claude: internal review contact sheet, never on stream; glow comes from shared tokens.css shadow token"
+      },
+      {
+        "rule": "wide-tracking",
+        "value": "*",
+        "files": [
+          "prototypes/stinger-sheet.html"
+        ],
+        "createdAt": "2026-11-05T13:02:05.549Z",
+        "reason": "Claude: tracking is only on the short uppercase h1 label of an internal review sheet"
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "prototypes/index.html"
+        ],
+        "createdAt": "2026-11-05T13:13:44.073Z",
+        "reason": "Claude: internal prototype index page (round 2 styling, never on stream); glow from shared tokens.css shadow token"
+      },
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "prototypes/index.html"
+        ],
+        "createdAt": "2026-11-05T13:13:44.406Z",
+        "reason": "Claude: internal prototype index page (round 2 styling, never on stream); glow from shared tokens.css shadow token"
+      },
+      {
+        "rule": "wide-tracking",
+        "value": "*",
+        "files": [
+          "prototypes/index.html"
+        ],
+        "createdAt": "2026-11-05T13:15:07.421Z",
+        "reason": "Claude: tracking only on short uppercase h1 labels of the internal prototype index (round 2 styling)"
       }
     ]
   }

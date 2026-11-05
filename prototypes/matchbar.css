@@ -1,0 +1,140 @@
+/* Match banner prototype: three variants, one entrance, then completely still. */
+.stage .bg { position: absolute; inset: 0; background: #0a0705 url("../shared/game.webp") center / 1920px 1080px no-repeat; }
+body.nobg .stage .bg { display: none; }
+
+/* anchors: tr = right edge 1912, under the menu buttons (y<=50); tl = left 8, under the resource bar */
+.slot { position: absolute; top: 58px; }
+.slot.tr { right: 8px; }
+.slot.tl { left: 8px; top: 52px; }
+
+.mb { position: relative; width: max-content; font-family: var(--font-ui); color: var(--text-light);
+  font-variant-numeric: tabular-nums; --maxw: 300px; max-width: var(--maxw);
+  animation: drop 0.6s var(--ease-heavy) both; }
+.mb.s2 { --maxw: 360px; }
+.mb.s4 { --maxw: 420px; }
+.mb.noanim { animation: none; }
+/* one short heavy settle, no overshoot, then nothing moves */
+@keyframes drop { from { transform: translateY(-30px); opacity: 0; } 55% { opacity: 1; } to { transform: none; opacity: 1; } }
+
+/* shared row grid: pip | name | civ | elo */
+.mb .row { display: grid; align-items: center; min-width: 0; }
+.mb .nm { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mb .elo { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* player-colour pip: enamel / wax dot, colour from colorHex, neutral drop shadow only */
+.mb .pip { display: block; width: 10px; height: 10px; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, color-mix(in srgb, var(--c) 62%, #fff 38%) 0 18%, var(--c) 52%, color-mix(in srgb, var(--c) 62%, #000 38%) 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(0, 0, 0, 0.45); }
+
+/* =====================================================================
+   V1  Brass plaque: walnut board, thin brass rim, engraved rows
+   ===================================================================== */
+.mb.v1 { box-sizing: border-box; padding: 5px 9px 7px; border: 2px solid transparent; border-radius: 4px;
+  background:
+    repeating-linear-gradient(92deg, rgba(0, 0, 0, 0.07) 0 2px, transparent 2px 7px) padding-box,
+    linear-gradient(180deg, #3a2415 0%, #26160c 60%, #1c100a 100%) padding-box,
+    linear-gradient(135deg, var(--brass-300), var(--brass-600) 45%, var(--brass-400) 70%, var(--brass-700)) border-box;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.65), 0 1px 3px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 220, 160, 0.08), inset 0 0 14px rgba(0, 0, 0, 0.5); }
+.mb.v1 .hd { font-family: var(--font-title); font-weight: 600; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--brass-300); text-align: center; padding: 1px 0 4px; margin-bottom: 2px;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85); border-bottom: 1px solid rgba(0, 0, 0, 0.7); box-shadow: 0 1px 0 rgba(227, 196, 138, 0.12); }
+.mb.v1 .team + .team { margin-top: 3px; padding-top: 3px; border-top: 1px solid rgba(0, 0, 0, 0.7); box-shadow: 0 -1px 0 rgba(227, 196, 138, 0.1); }
+.mb.v1 .th { display: flex; justify-content: space-between; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-dim); line-height: 14px; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8); }
+.mb.v1 .team.mine .tl { color: var(--brass-400); }
+.mb.v1 .ta { font-variant-numeric: tabular-nums; }
+.mb.v1 .row { grid-template-columns: 10px minmax(0, 1fr) 66px 34px; column-gap: 6px; height: 17px; padding: 0 3px 0 5px; position: relative;
+  font-size: 12px; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85); }
+.mb.v1 .nm { color: var(--ivory-200); }
+.mb.v1 .civ { color: var(--text-dim); font-size: 11px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mb.v1 .elo { color: var(--brass-300); font-weight: 500; }
+/* Paul: inlaid brass bar on the left, lit row, bolder name */
+.mb.v1 .row.me { background: linear-gradient(90deg, rgba(227, 196, 138, 0.16), rgba(227, 196, 138, 0.05)); border-radius: 2px; }
+.mb.v1 .row.me::before { content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: 2px; border-radius: 1px;
+  background: linear-gradient(180deg, var(--brass-300), var(--brass-600)); }
+.mb.v1 .row.me .nm { color: #fff4dc; font-weight: 600; }
+/* rivets */
+.mb.v1::before, .mb.v1::after { content: ""; position: absolute; top: 3px; width: 4px; height: 4px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--brass-300), var(--brass-600)); box-shadow: 0 1px 1px rgba(0, 0, 0, 0.8); }
+.mb.v1::before { left: 4px; } .mb.v1::after { right: 4px; }
+
+/* =====================================================================
+   V2  Parchment slip: pinned with a brass tack, inked names, wax VS
+   ===================================================================== */
+.mb.v2 { padding-top: 5px; filter: drop-shadow(0 5px 7px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 1px rgba(20, 10, 4, 0.95)); }
+.mb.v2 .slip { padding: 12px 11px 9px 11px; color: #2b1c0e;
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(255, 250, 235, 0.55), transparent 60%),
+    linear-gradient(90deg, rgba(120, 80, 30, 0.22), transparent 7%, transparent 93%, rgba(120, 80, 30, 0.28)),
+    linear-gradient(180deg, #ead9b4, #dbc79c 55%, #cfb988);
+  clip-path: polygon(0 1%, 3% 0, 12% 1.2%, 30% 0.3%, 52% 1%, 74% 0, 91% 1%, 100% 0.2%, 99.3% 30%, 100% 62%, 99.4% 100%, 88% 99%, 70% 100%, 48% 98.9%, 27% 100%, 9% 99%, 0.6% 100%, 0 70%, 0.7% 35%); }
+.mb.v2 .hd { font-family: var(--font-title); font-weight: 600; font-size: 11.5px; letter-spacing: 0.22em; text-transform: uppercase; text-align: center;
+  color: #4a2f14; padding-bottom: 3px; margin-bottom: 3px; border-bottom: 1px solid rgba(60, 36, 14, 0.55); }
+.mb.v2 .th { display: flex; justify-content: space-between; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: #7a5a30; line-height: 13px; }
+.mb.v2 .team.mine .tl { color: #5a2418; font-weight: 600; }
+.mb.v2 .row { grid-template-columns: 10px minmax(0, 1fr) 58px 32px; column-gap: 5px; height: 15px; padding: 0 2px; position: relative; }
+.mb.v2 .nm { font-family: var(--font-serif); font-weight: 600; font-size: 14px; color: #26170a; letter-spacing: 0.01em; }
+.mb.v2 .civ { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 12.5px; color: #5e4524; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mb.v2 .elo { font-size: 12px; font-weight: 600; color: #4a2f14; }
+.mb.v2 .pip { box-shadow: 0 1px 1px rgba(40, 20, 6, 0.6), 0 0 0 1px rgba(40, 20, 6, 0.4); }
+/* Paul: an ink underline, heavier name */
+.mb.v2 .row.me .nm { font-weight: 700; color: #1a0f05; }
+.mb.v2 .row.me::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: rgba(90, 36, 24, 0.55); }
+.mb.v2 .row.me { background: linear-gradient(90deg, rgba(150, 100, 40, 0.16), transparent 90%); }
+/* wax VS on a thin ink rule */
+.mb.v2 .vs { position: relative; height: 18px; margin: 2px 0 1px; display: flex; align-items: center; justify-content: center; }
+.mb.v2 .vs::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(60, 36, 14, 0.5); }
+.mb.v2 .vs b { position: relative; width: 20px; height: 18px; border-radius: 46% 54% 50% 50% / 52% 48% 54% 46%; display: grid; place-items: center;
+  font: 600 8.5px/1 var(--font-title); letter-spacing: 0.04em; color: #e9c9b8;
+  background: radial-gradient(circle at 34% 28%, #c4503f 0 12%, #8f2a20 48%, #5a150f 100%);
+  box-shadow: 0 1px 2px rgba(30, 8, 4, 0.8), inset 0 0 0 1px rgba(60, 10, 6, 0.55); text-shadow: 0 -1px 0 rgba(40, 6, 3, 0.8); }
+/* brass tack */
+.mb.v2 .tack { position: absolute; left: 50%; top: 0; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; z-index: 2;
+  background: radial-gradient(circle at 35% 30%, #f3dfae 0 14%, var(--brass-400) 45%, var(--brass-700) 100%);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(40, 24, 8, 0.7); }
+
+/* =====================================================================
+   V3  Banners: one thin cloth pennant per team, brass rod
+   ===================================================================== */
+.mb.v3 { --pw: 146px; padding: 0 0 2px; }
+.mb.v3.s2 { --pw: 176px; } .mb.v3.s4 { --pw: 206px; }
+.mb.v3 .rod { position: relative; z-index: 2; height: 17px; display: flex; align-items: center; justify-content: center; margin: 0 -4px;
+  border-radius: 8px; background: linear-gradient(180deg, var(--brass-300), var(--brass-500) 45%, var(--brass-700));
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 240, 200, 0.5); }
+.mb.v3 .rm { font-family: var(--font-title); font-weight: 600; font-size: 10.5px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--ink-on-brass); text-shadow: 0 1px 0 rgba(255, 235, 190, 0.4); }
+.mb.v3 .flags { display: flex; gap: 8px; margin-top: -3px; align-items: flex-start; }
+.mb.v3 .flag { width: var(--pw); filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 1px rgba(0, 0, 0, 0.9)); }
+.mb.v3 .cloth { position: relative; padding: 9px 8px 20px; color: var(--ivory-100);
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.06) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, color-mix(in srgb, var(--tc) 52%, #1a100a), color-mix(in srgb, var(--tc) 36%, #0d0806));
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 13px), 0 100%); }
+.mb.v3 .cloth::before { content: ""; position: absolute; inset: 4px 4px 4px 4px; border: 1px dashed rgba(239, 230, 212, 0.32);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 4px), 50% calc(100% - 15px), 0 calc(100% - 4px)); pointer-events: none; }
+.mb.v3 .th { display: flex; justify-content: space-between; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: rgba(239, 230, 212, 0.7); line-height: 13px; padding: 0 3px 3px; margin-bottom: 2px; border-bottom: 1px solid rgba(0, 0, 0, 0.35); }
+.mb.v3 .flag.mine .tl { color: var(--brass-300); }
+/* hanging rings */
+.mb.v3 .flag::before, .mb.v3 .flag::after { content: ""; position: absolute; top: -2px; z-index: 3; width: 7px; height: 9px; border-radius: 50%;
+  border: 2px solid var(--brass-400); border-bottom-color: var(--brass-600); box-sizing: border-box; }
+.mb.v3 .flag { position: relative; }
+.mb.v3 .flag::before { left: 14%; } .mb.v3 .flag::after { right: 14%; }
+/* two-line row: name / civ + elo */
+.mb.v3 .row { grid-template-columns: 10px minmax(0, 1fr) auto; grid-template-rows: 15px 13px; column-gap: 7px; padding: 1px 3px; position: relative; }
+.mb.v3 .pip { grid-row: 1 / span 2; align-self: center; }
+.mb.v3 .nm { grid-column: 2 / -1; font-family: var(--font-serif); font-weight: 700; font-size: 14.5px; line-height: 15px; color: #fbf3e2; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6); }
+.mb.v3 .civ { grid-column: 2; grid-row: 2; font-size: 10.5px; line-height: 13px; color: rgba(239, 230, 212, 0.72); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mb.v3 .elo { grid-column: 3; grid-row: 2; font-size: 11px; line-height: 13px; font-weight: 600; color: #f3dfae; }
+/* Paul: stitched underline + lit brass thread */
+.mb.v3 .row.me .nm { color: #fff; }
+.mb.v3 .row.me::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; border-bottom: 1px dashed rgba(227, 196, 138, 0.85); }
+.mb.v3 .row.me { background: rgba(255, 240, 200, 0.08); }
+
+/* ---------- preview control panel (hidden with ?shot=1) ---------- */
+.panel { position: fixed; right: 10px; bottom: 10px; z-index: 50; display: flex; align-items: center; gap: 6px; padding: 6px;
+  background: rgba(10, 7, 5, 0.85); border: 1px solid rgba(201, 165, 106, 0.4); border-radius: 4px; font: 500 12px var(--font-ui); }
+.panel button { color: var(--text-light); background: #2a1a10; border: 1px solid #5a3a22; border-radius: 3px; padding: 4px 9px; font: inherit; cursor: pointer; }
+.panel button.on { background: var(--brass-500); color: var(--ink-on-brass); }
+.panel .sep { width: 1px; height: 18px; background: rgba(201, 165, 106, 0.35); }
+body.shot .panel { display: none; }

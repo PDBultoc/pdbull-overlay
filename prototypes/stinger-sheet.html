@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PDBull stingers · contact sheet</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<style>
+  body { margin: 0; background: #0b0806; color: #e9dcc2; font-family: var(--font-ui, sans-serif); padding: 18px 22px; }
+  h1 { font-family: var(--font-title, serif); letter-spacing: .18em; color: #d9b56a; font-weight: 600; font-size: 26px; margin: 0 0 10px; }
+  .row { display: grid; grid-template-columns: 150px repeat(7, 1fr); gap: 8px; align-items: center; margin-bottom: 10px; }
+  .row h2 { font-family: var(--font-title, serif); font-size: 18px; color: #e3c48a; margin: 0; font-weight: 600; }
+  .cell { position: relative; }
+  .cell canvas { width: 100%; display: block; border: 1px solid #3a2a1c; }
+  .cell span { position: absolute; left: 4px; bottom: 4px; font-size: 12px; background: rgba(13,8,6,.8); padding: 1px 5px; border-radius: 3px; }
+  .cell.cut canvas { border-color: #ff5a3a; }
+</style>
+</head>
+<body>
+<h1>STINGERS · CONTACT SHEET</h1>
+<div id="rows"></div>
+<script type="module">
+// 7 frames per stinger over the game capture; the red frame is the cut point (OBS switches scene there).
+const W = 1920, H = 1080, S = 0.25;
+const list = [['a', './stingers/seal.js'], ['b', './stingers/scroll.js'], ['c', './stingers/smoke.js']];
+const game = new Image(); game.src = '../shared/game.webp';
+await new Promise((r) => { if (game.complete) r(); game.onload = game.onerror = r; setTimeout(r, 2000); }); // not decode(): hangs on a hidden window
+const big = document.createElement('canvas'); big.width = W; big.height = H; const bg = big.getContext('2d');
+for (const [v, path] of list) {
+  let mod; try { mod = await import(path); } catch (e) { continue; }
+  const inst = await mod.create(W, H), m = mod.meta;
+  const row = document.createElement('div'); row.className = 'row';
+  row.innerHTML = `<h2>${v.toUpperCase()} · ${m.name}<br><small>${m.durationMs} ms · cut ${m.cutMs}</small></h2>`;
+  const times = [0.1, 0.25, 0.4, 0, 0.6, 0.75, 0.9].map((f) => f === 0 ? m.cutMs : Math.round(f * m.durationMs)).sort((a, b) => a - b);
+  for (const t of times) {
+    bg.clearRect(0, 0, W, H); inst.draw(bg, t);
+    const c = document.createElement('canvas'); c.width = W * S; c.height = H * S; const g = c.getContext('2d');
+    g.drawImage(game, 0, 0, c.width, c.height); g.drawImage(big, 0, 0, c.width, c.height);
+    const cell = document.createElement('div'); cell.className = 'cell' + (t === m.cutMs ? ' cut' : '');
+    cell.append(c); cell.insertAdjacentHTML('beforeend', `<span>${t} ms${t === m.cutMs ? ' · CUT' : ''}</span>`);
+    row.append(cell);
+  }
+  document.getElementById('rows').append(row);
+}
+</script>
+</body>
+</html>
