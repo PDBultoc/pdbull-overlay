@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>intro harness (T8)</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+<style>html,body{margin:0;width:1920px;height:1080px;background:#0a0705;overflow:hidden}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;background:#0a0705 url("../shared/game.webp") center/1920px 1080px no-repeat}
+body.nobg #stage{background:transparent}
+body.magenta #stage{background:#ff00ff}
+#stage>[data-mod]{position:absolute;inset:0;pointer-events:none}</style></head>
+<body>
+<div id="stage"></div>
+<script type="module">
+// Review harness for modules/intro.js (own page; overlay.html is not touched).
+// ?case=1v1|4v4|long|longteam  ?t=<sec> freeze at that timeline time  ?bg=0 transparent  (no t: plays live once, test id)
+import { mount } from '../modules/intro.js';
+const q = new URLSearchParams(location.search);
+if (q.get('bg') === '0') document.body.classList.add('nobg');
+if (q.get('bg') === 'm') document.body.classList.add('magenta'); // pixel-measure aid: flat magenta behind the band
+const P = (id, name, hex, civ) => ({ profileId: id, name, civ, colorHex: hex });
+const LONG = 'Extremely_Long_Name_25chr';
+// 1v1 = real pa100 match 0 (names, civs, map; pa100 has no colorHex so the sides take the blue/green default)
+const me1 = P(551021, 'PDBull', undefined, 'Koreans'), foe1 = P(20186100, 'SwedishGoblinTwitch', undefined, 'Portuguese');
+const CASES = {
+  '1v1': { id: 'test-1v1', mode: '1v1', map: 'Arabia', me: me1, myTeam: [me1], enemies: [[foe1]], hideCivs: false },
+  long: (() => { const a = P(551021, LONG, '#405BFF', 'Mongols'), b = P(2, 'Another_Long_Twitch_Name_', '#FF0000', 'Teutons'); return { id: 'test-long', mode: '1v1', map: 'Mediterranean', me: a, myTeam: [a], enemies: [[b]], hideCivs: false }; })(),
+  // SYNTHETIC 4v4 (hand-made)
+  '4v4': (() => {
+    const t1 = [P(551021, 'PDBull', '#405BFF', 'Franks'), P(11, 'NordicFox', '#00FF00', 'Mongols'), P(12, 'luna_pawn', '#00FFFF', 'Aztecs'), P(13, 'ketchupKnight', '#FFFF00', 'Huns')];
+    const t2 = [P(21, 'SwedishGoblinTwitch', '#FF0000', 'Britons'), P(22, 'Nagabhata', '#FF9600', 'Gurjaras'), P(23, 'Mate_Number_Three', '#797979', 'Slavs'), P(24, 'Foe_D', '#FF57B3', 'Turks')];
+    return { id: 'test-4v4', mode: 'tg', map: 'Black Forest', me: t1[0], myTeam: t1, enemies: [t2], hideCivs: false };
+  })(),
+  longteam: (() => {
+    const t1 = [P(551021, LONG, '#405BFF', 'Franks'), P(11, 'Short', '#00FF00', 'Mongols'), P(12, 'Mid_Length_Name', '#00FFFF', 'Aztecs'), P(13, LONG.replace('Extremely', 'Another'), '#FFFF00', 'Huns')];
+    const t2 = [P(21, LONG.toLowerCase(), '#FF0000', 'Britons'), P(22, 'X', '#FF9600', 'Gurjaras')];
+    return { id: 'test-longteam', mode: 'tg', map: 'Hideout', me: t1[0], myTeam: t1, enemies: [t2], hideCivs: false };
+  })(),
+};
+const match = { ...CASES[q.get('case') || '1v1'] };
+if (q.get('id')) match.id = q.get('id'); // a non test- id exercises the once-per-match gate
+const subs = [];
+const bus = { on(n, fn) { subs.push([n, fn]); return () => {}; }, emit(n, p) { subs.filter((s) => s[0] === n).forEach((s) => s[1](p)); } };
+const layer = document.createElement('div'); layer.dataset.mod = 'intro';
+const handle = mount(document.getElementById('stage').appendChild(layer),{ bus, cfg: { minSeconds: 6 } });
+const canv = () => document.querySelectorAll('canvas').length;
+window.__introReady = false;
+const t = q.get('t');
+const done = (ok) => { window.__introReady = ok; console.log('CONSOLE intro harness ' + (ok ? 'ready' : 'FAILED') + ' case=' + (q.get('case') || '1v1') + ' t=' + t); };
+if (t != null) handle.freezeAt(match, +t).then(done);
+else if (q.get('bus') === '1') { // lifecycle probe: real event path, twice; canvases must be 0 before, >0 during, 0 after
+  console.log('CONSOLE LIFE idle canvases=' + canv());
+  bus.emit('match-start', { type: 'match-start', match });
+  setTimeout(() => bus.emit('match-start', { type: 'match-start', match }), 1500); // duplicate: ignored for a real id
+  setTimeout(() => console.log('CONSOLE LIFE during canvases=' + canv()), 3000);
+  const t0 = performance.now();
+  const poll = setInterval(() => { // ends when the intro disposed its canvas (or after 40 s of page time)
+    const el = Math.round(performance.now() - t0);
+    if ((canv() === 0 && el > 4000) || el > 40000) { clearInterval(poll); console.log('CONSOLE LIFE after canvases=' + canv() + ' at=' + el + 'ms played=' + sessionStorage.getItem('pdbull-intro-played')); }
+  }, 250);
+} else handle.play(match).then(done);
+window.__intro = handle;
+window.addEventListener('error', (e) => console.log('CONSOLE intro error: ' + e.message));
+window.addEventListener('unhandledrejection', (e) => console.log('CONSOLE intro rejection: ' + ((e.reason && e.reason.stack) || e.reason)));
+</script>
+</body></html>
