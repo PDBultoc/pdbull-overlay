@@ -2,7 +2,11 @@
 // Ported from prototypes/intro.js. Mounted by overlay.html; plays on bus 'match-start' (real poller event or panel test), once per match id.
 // No WebGL while idle: the scene is created on play and disposed when the intro ends.
 import { createScene } from '../core/scene.js';
-import { introFromMatch, introCivs, fitSize, nextAction, stretchTime, createEventDedup } from '../core/intrologic.js';
+import { introFromMatch, introCivs, introPlayerIds, fitSize, nextAction, stretchTime, createEventDedup } from '../core/intrologic.js';
+import { createRatings } from '../core/ratings.js';
+
+// sample RM 1v1 ELOs for panel test buttons (test-* ids never touch the network)
+const SAMPLE_ELOS = [1505, 1257, 1131, 1955, 1725, 1655, 1306, 1579];
 
 const BASE_DUR = 5.2;
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
@@ -111,25 +115,49 @@ function buildSeal(wt, THREE, CLOTH, data, civs) {
       const nm = side.names[0];
       const text = spaced(nm.toUpperCase(), nm.length <= 12);
       const hasCiv = !!sideCivs[0];
-      const y = hasCiv ? ch * 0.545 : ch * 0.585;
+      const elo = (side.elos || [])[0];
+      const hasElo = Number.isFinite(elo);
+      const y = hasCiv ? (hasElo ? ch * 0.46 : ch * 0.545) : (hasElo ? ch * 0.52 : ch * 0.585);
       fitText(text, nm.length > 7 ? 168 : 200, 38);
       inked(text, tx, y);
+      let yy = y;
+      if (hasElo) { // 1v1: "ELO 1505" under the name, smaller
+        yy = y + 100;
+        g.shadowBlur = 4; g.shadowOffsetY = 3;
+        g.fillStyle = '#e9dcc0'; g.font = `600 96px ${SERIF}`;
+        g.fillText(`ELO ${elo}`, tx, yy);
+      }
       if (hasCiv) {
         g.shadowBlur = 4; g.shadowOffsetY = 3;
         g.fillStyle = '#e9dcc0'; g.font = `italic 600 88px ${SERIF}`;
-        g.fillText(sideCivs[0], tx, y + 118);
+        g.fillText(sideCivs[0], tx, yy + 118);
         g.shadowColor = 'transparent';
         g.strokeStyle = 'rgba(214,180,110,0.7)'; g.lineWidth = 3; const hw = 330;
-        g.beginPath(); g.moveTo(tx - hw - 130, y + 90); g.lineTo(tx - 130, y + 90); g.moveTo(tx + 130, y + 90); g.lineTo(tx + hw + 130, y + 90); g.stroke();
+        g.beginPath(); g.moveTo(tx - hw - 130, yy + 90); g.lineTo(tx - 130, yy + 90); g.moveTo(tx + 130, yy + 90); g.lineTo(tx + hw + 130, yy + 90); g.stroke();
       }
     } else {
       const slot = Math.min(150, 560 / n), base = Math.min(124, slot * 0.8);
       const y0 = ch * 0.5 - ((n - 1) * slot) / 2;
       side.names.forEach((nm, i) => {
         const text = nm.toUpperCase();
-        const px = fitText(text, base, 34);
-        g.fillStyle = gg;
-        inked(text, tx, y0 + i * slot + px * 0.35);
+        const elo = (side.elos || [])[i];
+        if (!Number.isFinite(elo)) {
+          const px = fitText(text, base, 34);
+          g.fillStyle = gg;
+          inked(text, tx, y0 + i * slot + px * 0.35);
+          return;
+        }
+        // team: "NAME · 1505" - the ELO is smaller (0.6 x) and the whole line shrinks to fit
+        const eloText = ` · ${elo}`, K = 0.6;
+        const widthAt = (p) => { g.font = `700 ${p}px ${TITLE}`; const a = g.measureText(text).width; g.font = `600 ${p * K}px ${SERIF}`; return a + g.measureText(eloText).width; };
+        const px = fitSize(widthAt, FIT_W, base, 30);
+        g.font = `700 ${px}px ${TITLE}`; const w1 = g.measureText(text).width;
+        g.font = `600 ${px * K}px ${SERIF}`; const w2 = g.measureText(eloText).width;
+        const yb = y0 + i * slot + px * 0.35, x0 = tx - (w1 + w2) / 2;
+        g.textAlign = 'left';
+        g.font = `700 ${px}px ${TITLE}`; inked(text, x0, yb);
+        g.font = `600 ${px * K}px ${SERIF}`; g.fillStyle = '#e9dcc0'; g.fillText(eloText, x0 + w1, yb);
+        g.textAlign = 'center';
       });
     }
     g.shadowColor = 'transparent';
@@ -354,6 +382,7 @@ export function mount(root, ctx = {}) {
   root.innerHTML = '<div class="band"><div class="gl"></div></div>';
   const band = root.querySelector('.band'), gl = root.querySelector('.gl');
   let sc = null, busy = false, dead = false, safety = 0, pending = null;
+  const ratings = createRatings();
 
   const bandOpacity = (tt) => { band.style.opacity = sm(seg(tt, 0, 0.25)) * (1 - sm(seg(tt, 4.95, 5.2))); };
   function finish() {
@@ -373,8 +402,16 @@ export function mount(root, ctx = {}) {
     else if (a === 'play') play(match);
   }
 
+  // RM 1v1 ELO of every player: fetched first (<= 2.5 s, missing ones stay null); panel test ids use sample numbers
+  async function loadElos(match) {
+    const ids = introPlayerIds(match);
+    if (/^test-/.test(String(match && match.id))) return new Map(ids.map((id, i) => [id, SAMPLE_ELOS[i % SAMPLE_ELOS.length]]));
+    try { return await ratings.get(ids); } catch (e) { return new Map(); }
+  }
+
   async function prepare(match) {
-    const data = introFromMatch(match);
+    const elos = await loadElos(match);
+    const data = introFromMatch(match, elos);
     if (!data) return null;
     const civs = introCivs(match);
     const [wtMod, camMod] = await Promise.all([import('../shared/war-table.js'), import('../shared/campaign.js')]);

@@ -43,8 +43,14 @@ function sides(m) {
   return [mine.slice(0, MAX_PER_SIDE), foes.slice(0, MAX_PER_SIDE)];
 }
 
+/** optional ratings Map<profileId, number|null> -> { elos } aligned with the players; without ratings no key at all */
+function elosOf(ps, ratings) {
+  if (!ratings || typeof ratings.get !== 'function') return {};
+  return { elos: ps.map((p) => { const v = p ? ratings.get(p.profileId) : null; return Number.isFinite(v) ? v : null; }) };
+}
+
 /** normalized match (core/aoe2.js) -> { left:{names,colour}, right:{names,colour}, map, mode:'1v1'|'team' }; left = Paul's team. */
-export function introFromMatch(m) {
+export function introFromMatch(m, ratings) {
   if (!m) return null;
   const [l, r] = sides(m);
   const has = (p) => !!(p && rgbOf(p.colorHex));
@@ -53,8 +59,8 @@ export function introFromMatch(m) {
   let rcol = has(r[0]) ? colourName(r[0].colorHex) : 'green';
   if (rcol === lc) rcol = ['green', 'red', 'yellow', 'teal'].find((c) => c !== lc);
   return {
-    left: { names: l.map(nm), colour: lc },
-    right: { names: r.map(nm), colour: rcol },
+    left: { names: l.map(nm), colour: lc, ...elosOf(l, ratings) },
+    right: { names: r.map(nm), colour: rcol, ...elosOf(r, ratings) },
     map: (typeof m.map === 'string' && m.map.trim()) || 'Unknown map',
     mode: m.mode === '1v1' ? '1v1' : 'team',
   };
@@ -120,4 +126,11 @@ export function stretchTime(t, total, base) {
   if (t < HOLD_AT) return t;
   if (t < HOLD_AT + extra) return HOLD_AT;
   return t - extra;
+}
+
+/** profile ids in the same order as introFromMatch players: left side then right side (for the ratings lookup) */
+export function introPlayerIds(m) {
+  if (!m) return [];
+  const [l, r] = sides(m);
+  return [...l, ...r].map((p) => p && p.profileId).filter((x) => x != null);
 }
