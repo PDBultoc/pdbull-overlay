@@ -38,11 +38,22 @@ export function createRemote({
   setTimer = setTimeout,
   clearTimer = clearTimeout,
   debounceMs = 700,
+  now = Date.now,
 } = {}) {
   const live = Boolean(room);
   const url = BASE + topicFor(room);
-  let es = null, pending = null, timer = null;
-  const status = (ok, reason) => { try { onStatus({ source: 'sync', ok, reason }); } catch { /* ignore */ } };
+  let es = null, pending = null, timer = null, blockedUntil = 0;
+  const status = (ok, reason) => { try { onStatus({ source: 'room', ok, reason }); } catch { /* ignore */ } };
+  // ntfy.sh answers 429 past its daily limit: say so once and pause, never retry in a storm.
+  const blocked = () => now() < blockedUntil;
+  function failed(r) {
+    const code = r && r.status;
+    let wait = code === 429 ? 60000 : 10000;
+    const ra = Number(r && r.headers && r.headers.get && r.headers.get('retry-after'));
+    if (Number.isFinite(ra) && ra > 0) wait = Math.min(ra * 1000, 600000);
+    blockedUntil = now() + wait;
+    status(false, 'http ' + code);
+  }
   const deliver = (s) => { if (s && typeof s === 'object') onSettings(s); };
 
   async function start() {
@@ -70,11 +81,12 @@ export function createRemote({
 
   async function flush() {
     timer = null;
+    if (blocked()) { pending = null; return; }
     const body = JSON.stringify(stripSecrets(pending));
     pending = null;
     try {
       const r = await fetchFn(url, { method: 'POST', body });
-      status(Boolean(r && r.ok), r && r.ok ? undefined : 'sync http ' + (r && r.status));
+      if (r && r.ok) status(true); else failed(r);
     } catch (e) { status(false, 'sync offline'); }
   }
 
@@ -87,9 +99,11 @@ export function createRemote({
 
   // Live events go out at once (no debounce); old ones are never replayed from the cache.
   async function publishEvent(type, payload) {
-    if (!live) return;
-    try { await fetchFn(url, { method: 'POST', body: JSON.stringify({ kind: 'event', type, payload, t: Date.now() }) }); }
-    catch { status(false, 'sync offline'); }
+    if (!live || blocked()) return;
+    try {
+      const r = await fetchFn(url, { method: 'POST', body: JSON.stringify({ kind: 'event', type, payload, t: Date.now() }) });
+      if (r && !r.ok) failed(r);
+    } catch { status(false, 'sync offline'); }
   }
 
   function stop() {

@@ -5,7 +5,7 @@ import { startAutoUpdate } from './core/autoupdate.js';
 import { createRemote, newRoom, stripSecrets } from './core/remote.js';
 import { connectStreamlabs } from './core/streamlabs.js';
 import { normalizeMatch } from './core/aoe2.js';
-import { countdownEnd, roomLinks, testEvent, TEST_ALERTS, latestUpdate } from './core/panelcore.js';
+import { countdownEnd, roomLinks, testEvent, TEST_ALERTS, latestUpdate, createSender } from './core/panelcore.js';
 
 function boot() {
   const settings = createSettings(localStorage, 'pdbull.v1');
@@ -77,9 +77,9 @@ function boot() {
   }
   const card = (title, body) => el('section', { class: 'card' }, [el('h2', { text: title }), ...body]);
 
-  // Everything the panel sends to overlays goes through the room only (a local emit too
-  // would reach an overlay in the same browser twice).
-  const send = (name, payload) => remote.publishEvent(name, payload);
+  // Events go to the local bus first (OBS dock and sources share it), then to the room as backup.
+  // Receivers dedup by event id (alerts by id, intro by id). latest-snapshot stays local.
+  const send = createSender({ bus, remote });
   let match1v1 = null;
   fetch('tests/fixtures/pa100.json').then((r) => r.json())
     .then((l) => { match1v1 = normalizeMatch(l[0], 551021); }).catch(() => { /* file:// or offline: built-in fake */ });
@@ -165,7 +165,7 @@ function boot() {
 
   // --- status dots (room = sync; aoe2 + chat are reported by the overlay)
   const dots = {};
-  for (const [src, label] of [['sync', 'room'], ['streamlabs', 'Streamlabs'], ['aoe2', 'aoe2'], ['chat', 'chat']]) {
+  for (const [src, label] of [['room', 'room'], ['streamlabs', 'Streamlabs'], ['aoe2', 'aoe2'], ['chat', 'chat']]) {
     const d = el('span', { class: 'dot' });
     dots[src] = d;
     $('dots').append(el('span', { title: 'no status yet' }, [d, label]));

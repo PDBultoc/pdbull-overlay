@@ -53,7 +53,7 @@ test('intro 1v1 payload wraps the real match', () => {
   const m = normalizeMatch(PA[0], 551021);
   const e = testEvent('intro1v1', 1, { match1v1: m });
   assert.equal(e.name, 'match-start');
-  assert.deepEqual(e.payload, { type: 'match-start', match: m });
+  assert.deepEqual(e.payload, { type: 'match-start', id: 'test-intro1v1-1', match: { ...m, id: 'test-1v1-1' } });
   assert.equal(e.payload.match.me.name, 'PDBull');
 });
 
@@ -65,7 +65,7 @@ test('intro 1v1 without a fetched fixture still yields a 1v1 match', () => {
 
 test('fake 4v4 match shape', () => {
   const m = testEvent('intro4v4', 1).payload.match;
-  assert.deepEqual(m, fakeMatch4v4());
+  assert.deepEqual(m, { ...fakeMatch4v4(), id: 'test-4v4-1' });
   assert.equal(m.mode, 'tg'); assert.equal(m.map, 'Arabia');
   assert.equal(m.myTeam.length, 4); assert.equal(m.enemies.length, 1); assert.equal(m.enemies[0].length, 4);
   assert.deepEqual([...m.myTeam, ...m.enemies[0]].map((p) => p.name), ['Player1', 'Player2', 'Player3', 'Player4', 'Player5', 'Player6', 'Player7', 'Player8']);

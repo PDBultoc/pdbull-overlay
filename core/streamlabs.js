@@ -7,6 +7,22 @@ const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const str = (v) => (v == null ? '' : String(v));
 const fallbackId = (type, m) => [type, str(m.name), str(m.amount), str(m.created_at ?? m.months ?? '')].join(':');
 
+// UNVERIFIED (I4, T10 checks these against Paul's real socket log): Streamlabs `sub_plan`
+// ('1000' | '2000' | '3000' | 'Prime') carries the tier, `sub_type: 'subgift'` + `gifter` mark a
+// gifted sub (believed to arrive once per recipient, `name` = recipient). Unknown or missing
+// fields leave the event exactly as before (Tier 1, no gift).
+const TIER = { 1000: '1', 2000: '2', 3000: '3' };
+function subEvent(id, name, m) {
+  const out = { type: 'sub', id, name, months: num(m.months) || 1, message: str(m.message) };
+  const plan = str(m.sub_plan).trim();
+  const tier = TIER[plan] || (/^prime$/i.test(plan) ? 'Prime' : null);
+  if (tier) out.tier = tier;
+  if (str(m.sub_type).toLowerCase() === 'subgift' && str(m.gifter).trim()) {
+    out.gift = 1; out.name = str(m.gifter).trim(); out.recipient = name;
+  }
+  return out;
+}
+
 export function mapEvent(raw) {
   if (!raw || typeof raw !== 'object' || !Array.isArray(raw.message)) return [];
   const t = raw.type;
@@ -15,7 +31,7 @@ export function mapEvent(raw) {
     const name = str(m.name || m.from);
     if (t === 'donation') return { type: 'donation', id, name, amount: num(m.amount), currency: str(m.currency || 'USD'), message: str(m.message) };
     if (t === 'follow') return { type: 'follow', id, name };
-    if (t === 'subscription' || t === 'resub') return { type: 'sub', id, name, months: num(m.months) || 1, message: str(m.message) };
+    if (t === 'subscription' || t === 'resub') return subEvent(id, name, m);
     if (t === 'bits') return { type: 'bits', id, name, amount: num(m.amount), message: str(m.message) };
     return null;
   }).filter(Boolean);

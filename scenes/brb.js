@@ -334,8 +334,7 @@ const bus = createBus({ name: 'pdbull' });
 // the scene is consume-only: it never publishes settings, so no echo guard (fromRemote) is needed
 const remote = createRemote({
   room: Q.get('room') || '',
-  onSettings: (s) => settings.patch(s),
-  onEvent: (type, payload) => bus.emit(type, payload),
+  onSettings: (s) => settings.patch(s), // settings only: room events belong to the overlay, never re-emitted here
 });
 bus.on('settings', (p) => { if (p && typeof p === 'object') settings.patch(p); else render(); });
 

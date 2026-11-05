@@ -52,19 +52,38 @@ export function toAlert(p) {
 }
 
 // FIFO, one at a time, dedup by id (last 200). play(a) returns a Promise. onIdle() fires when the queue runs dry.
-export function createQueue({ play, onIdle } = {}) {
+// Safety: an alert still unfinished after timeoutOf(a) ms (default durationOf + 4 s) is ended via
+// onTimeout(a) and the queue moves on. isHidden() true = the page is not drawing (OBS hid the source):
+// the alert is dropped instead of stalling the queue and replaying as a backlog later.
+export function createQueue({
+  play, onIdle, onTimeout,
+  timeoutOf = (a) => (durationOf(a) + 4) * 1000,
+  isHidden = () => false,
+  setTimer = setTimeout, clearTimer = clearTimeout,
+} = {}) {
   const pending = [], seen = new Set(), order = [];
   let busy = false;
   function remember(id) {
     seen.add(id); order.push(id);
     if (order.length > 200) seen.delete(order.shift());
   }
+  async function playOne(a) {
+    let timer = 0;
+    const guard = new Promise((resolve) => {
+      timer = setTimer(() => {
+        if (onTimeout) { try { onTimeout(a); } catch (e) { console.warn('alert timeout hook failed', e && e.message); } }
+        resolve();
+      }, timeoutOf(a));
+    });
+    try { await Promise.race([play(a), guard]); } finally { clearTimer(timer); }
+  }
   async function pump() {
     if (busy) return;
     busy = true;
     while (pending.length) {
       const a = pending.shift();
-      try { await play(a); } catch (e) { console.warn('alert play failed', e && e.message); }
+      if (isHidden()) continue;
+      try { await playOne(a); } catch (e) { console.warn('alert play failed', e && e.message); }
     }
     busy = false;
     if (onIdle) { try { onIdle(); } catch (e) { console.warn('alert idle failed', e && e.message); } }

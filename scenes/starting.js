@@ -48,8 +48,7 @@ bus.on('settings', (p) => { if (p && typeof p === 'object') settings.patch(p); }
 if (!SHOT) { // a capture must not open the ntfy stream (it never goes idle)
   const remote = createRemote({
     room: q.get('room') || '',
-    onSettings: (s) => settings.patch(s),
-    onEvent: (type, payload) => bus.emit(type, payload),
+    onSettings: (s) => settings.patch(s), // settings only: room events belong to the overlay, never re-emitted here
   });
   remote.start();
   startAutoUpdate();

@@ -2,7 +2,7 @@
 // Ported from prototypes/intro.js. Mounted by overlay.html; plays on bus 'match-start' (real poller event or panel test), once per match id.
 // No WebGL while idle: the scene is created on play and disposed when the intro ends.
 import { createScene } from '../core/scene.js';
-import { introFromMatch, introCivs, fitSize, nextAction, stretchTime } from '../core/intrologic.js';
+import { introFromMatch, introCivs, fitSize, nextAction, stretchTime, createEventDedup } from '../core/intrologic.js';
 
 const BASE_DUR = 5.2;
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
@@ -422,8 +422,10 @@ export function mount(root, ctx = {}) {
   }
 
   const offs = [];
+  const dupEvent = createEventDedup(20); // the same event arrives by the local bus and by the room
   if (bus && bus.on) {
     offs.push(bus.on('match-start', (p) => {
+      if (p && dupEvent(p.id)) return;
       const match = p && p.match;
       request(match);
     }));

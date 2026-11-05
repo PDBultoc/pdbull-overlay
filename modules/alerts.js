@@ -947,7 +947,7 @@ export function mount(layer, ctx = {}) {
   function play(a) {
     return new Promise((resolve) => {
       ensureScene().then((sc) => {
-        if (!sc || dead) { resolve(); return; }
+        if (!sc || dead || abandoned.has(a)) { resolve(); return; } // abandoned = the queue's safety timeout already moved on
         sc.start();                                  // resumes after an idle stop
         const url = cfg.sound !== false && cfg.sounds && typeof cfg.sounds[a.type] === 'string' ? cfg.sounds[a.type].trim() : '';
         synthOn = cfg.sound !== false && !url;
@@ -972,7 +972,18 @@ export function mount(layer, ctx = {}) {
     if (glEl) glEl.innerHTML = '';
   }
 
-  const queue = createQueue({ play, onIdle });
+  // I3: an alert that has not finished by durationOf + 4 s (+10 s while the scene is still cold-starting)
+  // is ended and the queue continues; a hidden page drops alerts instead of stalling the queue.
+  const abandoned = new WeakSet();
+  const queue = createQueue({
+    play, onIdle,
+    timeoutOf: (a) => (durationOf(a) + 4 + (scene ? 0 : 10)) * 1000,
+    isHidden: () => !!globalThis.document?.hidden,
+    onTimeout: (a) => {
+      abandoned.add(a);
+      if (cur && cur.a === a) finish();
+    },
+  });
   const off = bus && bus.on ? ['follow', 'sub', 'bits', 'donation'].map((type) => bus.on(type, (p) => {
     if (!enabled(type)) return;
     const a = toAlert({ ...p, type });

@@ -67,10 +67,24 @@ export function testEvent(key, now = Date.now(), opts = {}) {
     case 'donShort': return al('donation', { name: 'PDBull_Fan', amount: 5, currency: 'USD', message: 'Good luck!' });
     case 'donLong': return al('donation', { name: 'PDBull_Fan', amount: 25, currency: 'USD', message: 'Watching since the first Arabia game and still learning something new every stream. Thanks for the long sessions, the calm commentary and the honest reviews of every lost fight, keep it up!' });
     case 'longName': return al('follow', { name: LONG_NAME });
-    case 'intro1v1': return { name: 'match-start', payload: { type: 'match-start', match: opts.match1v1 || fakeMatch1v1() } };
-    case 'intro4v4': return { name: 'match-start', payload: { type: 'match-start', match: fakeMatch4v4() } };
+    // fresh ids on every click: a test always plays, never lands in sessionStorage, and the
+    // event id lets receivers drop the local-bus / room double delivery
+    case 'intro1v1': return { name: 'match-start', payload: { type: 'match-start', id, match: { ...(opts.match1v1 || fakeMatch1v1()), id: `test-1v1-${now}` } } };
+    case 'intro4v4': return { name: 'match-start', payload: { type: 'match-start', id, match: { ...fakeMatch4v4(), id: `test-4v4-${now}` } } };
     default: return null;
   }
+}
+
+// Dock events go to the LOCAL bus first (OBS dock and sources share it), then to the room as
+// backup. Receivers dedup by event id. latest-snapshot frames are local only: nobody reads
+// them in the room and every room message counts against ntfy's daily limit.
+const LOCAL_ONLY = new Set(['latest-snapshot']);
+export function createSender({ bus, remote }) {
+  return async (name, payload) => {
+    try { bus.emit(name, payload); } catch { /* local delivery must not block the room copy */ }
+    if (LOCAL_ONLY.has(name)) return;
+    await remote.publishEvent(name, payload);
+  };
 }
 
 // Real Streamlabs event -> [settings path, value] for the "last follower" strip, or null.

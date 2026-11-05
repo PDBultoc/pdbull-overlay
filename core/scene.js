@@ -87,7 +87,13 @@ export function createScene({ canvasHost, build, onFrame, maxFps = 60, tableOpts
     if (on) d?.addEventListener('visibilitychange', onVis); else d?.removeEventListener('visibilitychange', onVis);
   }
   function make(factory) {
-    const t = factory(canvasHost, { ...tableOpts, autoStart: false });
+    let t;
+    try { t = factory(canvasHost, { ...tableOpts, autoStart: false }); } catch (e) {
+      // WebGL context creation can throw (GPU reset, context limit): log it, stay startable
+      console.error('createScene: factory failed', e);
+      wt = null; wanted = false; halt();
+      return;
+    }
     wt = t;
     try { if (build) build(t); } catch (e) {
       console.error('createScene: build() failed', e);

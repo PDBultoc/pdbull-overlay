@@ -101,6 +101,18 @@ export function nextAction(storage, match, busy) {
   return shouldPlay(storage, match) ? 'play' : 'skip';
 }
 
+/** event-id dedup (local bus + room deliver the same event): true when `id` was seen before. No id = never a duplicate. Keeps the last `max` ids. */
+export function createEventDedup(max = 20) {
+  const seen = new Set();
+  return (id) => {
+    if (id == null || id === '') return false;
+    if (seen.has(id)) return true;
+    seen.add(id);
+    if (seen.size > max) seen.delete(seen.values().next().value);
+    return false;
+  };
+}
+
 export const HOLD_AT = 3.9;
 /** timeline time for wall time t when the intro should last `total` s instead of the base `base` s: the stamped state is held at HOLD_AT. */
 export function stretchTime(t, total, base) {

@@ -21,7 +21,6 @@ import { MODULES } from './core/registry.js';
 import { startAutoUpdate } from './core/autoupdate.js';
 import { createRemote } from './core/remote.js';
 import { createPoller } from './core/aoe2.js';
-import { createStatusRelay } from './core/camchatlogic.js';
 
 const q = new URLSearchParams(location.search);
 if (q.get('bg') === '1') document.body.classList.add('bg');   // review only, never default
@@ -72,19 +71,20 @@ function sync() {
 bus.on('settings', (p) => { if (p && typeof p === 'object') settings.patch(p); else sync(); });
 
 const room = q.get('room') || '';
-let fromRemote = false;
+// The overlay only consumes: it never writes settings, so it never publishes them to the room
+// (every room message counts against ntfy's daily limit). Room events go to the local bus;
+// alerts dedup by event id, the intro by event id too. The dock reads status from the local bus,
+// so no status relay to the room either.
 const remote = createRemote({
   room,
-  onSettings: (s) => { fromRemote = true; try { settings.patch(s); } finally { fromRemote = false; } },
-  // ntfy echoes our own messages back to us. Room events only go to the local bus;
-  // the status relay is fed by local sources alone (reportStatus), so it never loops.
+  onSettings: (s) => settings.patch(s),
   onEvent: (type, payload) => bus.emit(type, payload),
-  onStatus: (st) => bus.emit('status', st),
+  // own source name: the dock's room dot must not be flipped by the overlay's sync state
+  onStatus: (st) => bus.emit('status', { ...st, source: 'room-overlay' }),
 });
-const relay = createStatusRelay((p) => remote.publishEvent('status', p));
-function reportStatus(st) { bus.emit('status', st); relay(st); }
+function reportStatus(st) { bus.emit('status', st); }
 
-settings.onChange(() => { sync(); if (!fromRemote) remote.publish(settings.get()); });
+settings.onChange(() => { sync(); });
 
 const poller = createPoller({
   profileId: settings.get().profileId,
