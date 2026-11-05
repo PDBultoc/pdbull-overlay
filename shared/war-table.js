@@ -763,6 +763,10 @@ export function makeTable(o = {}) {
     clearcoat: 0.75, clearcoatRoughness: 1, clearcoatRoughnessMap: canvasTex(makeScratchCanvas(1024, 1024, 5, 1100), false, [W / 8, D / 8]),
     specularIntensity: 0.5,
   });
+  // the wood canvas is not periodic across the grain (u): a plain repeat drew a hard straight seam at world x = 0 that
+  // read as a dark, penumbra-less region on the table in every Starting Soon frame. Mirror the repeat instead: the
+  // grain is continuous at the joint (a book-matched top, as real table tops are made).
+  for (const t of [mat.map, mat.roughnessMap, mat.bumpMap, mat.clearcoatRoughnessMap]) { t.wrapS = THREE.MirroredRepeatWrapping; t.needsUpdate = true; }
   const geo = new RoundedBoxGeometry(W, 1.2, D, 4, 0.08);
   const m = new THREE.Mesh(geo, mat);
   m.position.y = -0.6; m.receiveShadow = true;
@@ -1111,13 +1115,14 @@ const VignetteShader = {
  * createWarTable(container, opts) -> WarTable
  * opts: transparent=false, shadows=true, bloom=true (true | {strength,radius,threshold}), vignette=true,
  *       pixelRatio=1, exposure=1.0, fov=30, env=0.12 (environment reflection strength), fog=true,
+ *       fogDensity=0.022 (FogExp2 density of the scene fog; use instead of poking wt.scene.fog.density),
  *       background=0x060403, table=true, board=true, candle=true|{...makeCandle opts}, dust=true|{...makeDust opts},
  *       candlePos=[-6.4,0,1.6], rim=0.22 (cool moon rim light intensity, 0 = off), autoStart=true
  */
 export function createWarTable(container, opts = {}) {
   const o = {
     transparent: false, shadows: true, bloom: true, vignette: true, pixelRatio: 1, exposure: 1.0,
-    fov: 30, env: 0.045, fog: true, background: 0x060403, table: true, board: true, candle: true, dust: true,
+    fov: 30, env: 0.045, fog: true, fogDensity: 0.022, background: 0x060403, table: true, board: true, candle: true, dust: true,
     candlePos: [-5.6, 0, 4.2], rim: 0.35, ambient: 0.04, autoStart: true, ...opts,
   };
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: o.transparent, premultipliedAlpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: false });
@@ -1133,7 +1138,7 @@ export function createWarTable(container, opts = {}) {
 
   const scene = new THREE.Scene();
   if (!o.transparent) scene.background = new THREE.Color(o.background);
-  if (o.fog && !o.transparent) scene.fog = new THREE.FogExp2(o.background, 0.022);
+  if (o.fog && !o.transparent) scene.fog = new THREE.FogExp2(o.background, o.fogDensity);
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environmentIntensity = o.env;

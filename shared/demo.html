@@ -175,6 +175,16 @@ if (scene === 'tokenart') {
   wt.camera.position.set(0.1, 1.45, 3.5); wt.camera.lookAt(-0.05, 0.35, -0.15);
   wt.candle.userData.aimDrips(wt.camera.position);
   finish(wt);
+} else if (scene === 'seam') {
+  // shared fix 2 repro: the table in front of the map, lit by a candle at Starting Soon's position (-6.55, 0, 2.75).
+  // A scout token stands on world x = 0, where the round-2 table texture wrapped (hard seam across the grain).
+  label.textContent = 'Table seam';
+  const wt = createWarTable(gl, { board: false, candlePos: [-6.55, 0, 2.75], candle: { lightIntensity: 54 }, exposure: 1.1, dust: false });
+  const map = makeCampaignMap({ width: 11, depth: 7.4, seed: 3, village: false }); wt.scene.add(map); map.userData.attach(wt);
+  map.userData.clearFog();
+  const mk = makeToken('scout', 'red'); mk.position.set(0, 0, 5.6); wt.scene.add(mk);
+  wt.camera.position.set(4.2, 4.6, 12.4); wt.camera.lookAt(-0.4, 0, 4.6);
+  finish(wt);
 } else if (scene === 'apicheck') {
   // T2 API self-check: logs "APICHECK PASS <name>" / "APICHECK FAIL <name> <detail>" and a final "APICHECK DONE fails=<n>"
   label.textContent = 'API check';
@@ -235,6 +245,17 @@ if (scene === 'tokenart') {
     check('CLOTH_COLOURS export = PLAYER_COLOURS.cloth', CLOTH_COLOURS === PLAYER_COLOURS.cloth && CLOTH_COLOURS.green === 0x245a3a);
     check('makeBanner(blue) uses cloth blue', makeBanner('blue').userData.clothColour === 0x14307f, String(makeBanner('blue').userData.clothColour));
     check('makeBanner(red) falls back to red', makeBanner('red').userData.clothColour === PLAYER_COLOURS.red, String(makeBanner('red').userData.clothColour));
+  });
+  run('fogDensity option', () => {
+    check('fogDensity default 0.022', wt.scene.fog && Math.abs(wt.scene.fog.density - 0.022) < 1e-9, String(wt.scene.fog?.density));
+    const wt3 = createWarTable(document.createElement('div'), { board: false, table: false, candle: false, dust: false, autoStart: false, fogDensity: 0.05 });
+    check('fogDensity option sets scene.fog.density', wt3.scene.fog && wt3.scene.fog.density === 0.05, String(wt3.scene.fog?.density));
+    wt3.renderer.dispose();
+  });
+  run('table wood has no repeat seam', () => {
+    // shared fix 2: the wood canvas is not periodic across the grain, so a plain repeat drew a hard seam at world x=0
+    const m = wt.table.material, maps = [m.map, m.roughnessMap, m.bumpMap];
+    check('table wood maps mirror across the grain', maps.every((t) => t && t.wrapS === THREE.MirroredRepeatWrapping), maps.map((t) => t && t.wrapS).join(','));
   });
   console.log('APICHECK DONE fails=' + fails);
   window.wt = wt;
