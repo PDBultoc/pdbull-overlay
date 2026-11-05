@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Alerts harness (T9)</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+<style>
+html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0a0705; }
+#stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #0a0705 url("../shared/game.webp") center / 1920px 1080px no-repeat; }
+#stage > [data-mod] { position: absolute; inset: 0; pointer-events: none; }
+/* camera frame stub (x 8-330, y 755-935): flashes amber as the sub echo */
+[data-mod=camchat] .cam { position: absolute; left: 8px; top: 755px; width: 320px; height: 180px; box-sizing: border-box; border: 6px solid #3b2416;
+  background: rgba(10, 6, 4, 0.6); box-shadow: 0 6px 24px rgba(0,0,0,.55); }
+#panel { position: fixed; right: 10px; bottom: 10px; z-index: 9; display: flex; gap: 6px; padding: 8px; background: rgba(13,8,6,.88); font: 12px sans-serif; }
+body.shot #panel { display: none; }
+</style>
+</head>
+<body>
+<!--
+  Harness for modules/alerts.js. URL params (review only):
+  ?alert=follow|sub|bits|donation  &name=  &amount= (bits count or donation amount)  &currency=EUR  &tier=  &months=  &gift=
+  &msg=long | <n>  (long = 600 chars, n = n chars) | text   &t=<seconds into the alert>  &shot=1 (freeze + hide panel)
+  &lifecycle=1  queue + idle-dispose probe, logs lines starting LIFE
+  &sounds=1  cfg.sound true (default for captures: false)
+-->
+<div id="stage"><div data-mod="camchat"><div class="cam"></div></div><div data-mod="alerts" id="layer"></div></div>
+<div id="panel">
+  <button data-a="follow">follow</button><button data-a="sub">sub</button><button data-a="bits" data-n="50">bits 50</button>
+  <button data-a="bits" data-n="500">500</button><button data-a="bits" data-n="1500">1500</button><button data-a="donation">donation</button>
+</div>
+<script type="module">
+import { mount } from '../modules/alerts.js';
+
+const q = new URLSearchParams(location.search);
+const SHOT = q.get('shot') === '1';
+if (SHOT) document.body.classList.add('shot');
+const handlers = new Map();
+const bus = { on(t, f) { (handlers.get(t) || handlers.set(t, new Set()).get(t)).add(f); return () => handlers.get(t).delete(f); },
+  emit(t, p) { (handlers.get(t) || []).forEach((f) => f(p)); } };
+const cfg = { enabled: true, follow: true, sub: true, bits: true, donation: true, sound: q.get('sounds') === '1', sounds: { follow: '', sub: '', bits: '', donation: '' } };
+const handle = mount(document.getElementById('layer'), { bus, cfg, settings: null });
+window.__alerts = handle;
+
+const LONG = 'GG on that Arabia game! The scout rush into a fast castle was brilliant, and the trebuchet push at the end had the whole chat on its feet. Keep the campaign going, commander, here is a little gold for the war chest. ';
+function message() {
+  const m = q.get('msg');
+  if (!m) return 'Great stream, commander! Here is some gold for the next castle.';
+  const n = m === 'long' ? 600 : /^\d+$/.test(m) ? +m : 0;
+  return n ? LONG.repeat(Math.ceil(n / LONG.length)).slice(0, n) : m;
+}
+let seq = 0;
+function payload(type, extra = {}) {
+  return { type, id: 'h' + (++seq) + '-' + Date.now(), name: q.get('name') || 'Bogdan_RO', amount: +(q.get('amount') || (type === 'bits' ? 500 : 10)),
+    currency: q.get('currency') || 'USD', tier: q.get('tier') || '1', months: +(q.get('months') || 1), gift: +(q.get('gift') || 0), message: message(), ...extra };
+}
+document.querySelectorAll('#panel [data-a]').forEach((b) => { b.onclick = () => bus.emit(b.dataset.a, payload(b.dataset.a, b.dataset.n ? { amount: +b.dataset.n } : {})); });
+
+const canvases = () => document.querySelectorAll('#layer canvas').length;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function lifecycle() {
+  const log = (s) => console.log('LIFE ' + s);
+  log('start canvases=' + canvases());
+  const t0 = performance.now();
+  bus.emit('follow', payload('follow', { id: 'same' }));
+  bus.emit('follow', payload('follow', { id: 'same' }));   // duplicate id: dropped
+  bus.emit('bits', payload('bits', { amount: 50 }));
+  bus.emit('sub', payload('sub'));
+  // deterministic: step the alert time by hand (advance() also stops the rAF loop), record the order and overlap
+  let peak = 0, maxRun = 0, order = [], last = null;
+  while (performance.now() - t0 < 60000) {
+    await sleep(30);
+    peak = Math.max(peak, canvases());
+    const c = handle.debug.current;
+    if (c && c !== last) { last = c; order.push(c.a.type + ':' + c.a.id.split('-')[0]); }
+    maxRun = Math.max(maxRun, c ? 1 : 0);
+    if (c) handle.debug.advance(0.5);
+    else if (!handle.debug.queue.busy && handle.debug.queue.size === 0 && order.length) break;
+  }
+  log('order=' + order.join(','));
+  log('queue empty canvases=' + canvases() + ' peak=' + peak + ' maxAtOnce=' + maxRun);
+  await sleep(9000); log('idle +9s canvases=' + canvases());
+  await sleep(2500); log('idle +11.5s canvases=' + canvases());
+  bus.emit('follow', payload('follow')); await handle.debug.whenPlaying(); log('new alert canvases=' + canvases());
+  log('done');
+}
+
+if (q.get('lifecycle') === '1') lifecycle();
+else if (q.get('alert')) {
+  const type = q.get('alert');
+  bus.emit(type, payload(type));
+  if (SHOT) (async () => {
+    await handle.debug.whenPlaying();
+    handle.debug.advance(+(q.get('t') || 3));
+    document.title = 'ready t=' + handle.debug.current.t.toFixed(2);
+    console.log('alerts ready alert=' + type + ' t=' + handle.debug.current.t.toFixed(2));
+  })().catch((e) => console.log('alerts error ' + e));
+}
+</script>
+</body>
+</html>
