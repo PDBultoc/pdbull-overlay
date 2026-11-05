@@ -44,3 +44,16 @@ test('countdownView: state, text and wax fraction in one object', () => {
   // a late end (longer than the nominal total) never gives a fraction above 1
   assert.equal(countdownView(1000 + 900000, 1000, 300).frac, 1);
 });
+
+import { waxTotal } from '../core/countdown.js';
+
+test('waxTotal: max(remaining at start, countdownMin); wax burns down from the first second', () => {
+  assert.equal(waxTotal(1200, 300), 1200);   // longer than the minimum: full at start, then burns
+  assert.equal(waxTotal(120, 300), 300);     // shorter: starts partly burnt (120/300)
+  assert.equal(waxTotal(null, 300), 300);
+  assert.equal(waxTotal(-5, 300), 300);
+  const end = 1e12 + 1200000, total = waxTotal(1200, 300);
+  assert.equal(countdownView(end, 1e12, total).frac, 1);
+  assert.ok(countdownView(end, 1e12 + 1000, total).frac < 1);
+  assert.ok(Math.abs(countdownView(end, 1e12 + 600000, total).frac - 0.5) < 1e-9);
+});

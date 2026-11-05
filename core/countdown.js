@@ -31,3 +31,8 @@ export function countdownView(end, now, totalSec = 300) {
   const frac = state === 'now' ? 0 : Math.min(1, Math.max(0, r / Math.max(1, totalSec)));
   return { state, text: formatCountdown(r), frac };
 }
+
+/** Wax denominator: max(seconds remaining when the countdown was set, countdownMin in seconds), so the wax burns down from the first second. */
+export function waxTotal(remaining, minSec) {
+  return Math.max(minSec, remaining == null || !Number.isFinite(remaining) ? 0 : remaining);
+}

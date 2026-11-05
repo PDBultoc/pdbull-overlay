@@ -3,14 +3,15 @@
 // The countdown burns the real candle down. settings.scenes.countdownEnd (epoch ms; null = "Starting soon" only) drives it,
 // settings.latest.follower feeds the corner welcome. Test-only params: ?shot=1&t=<s> (deterministic capture frozen at scene time t).
 import { createScene } from '../core/scene.js';
+import { createWarTable, fitStage } from '../shared/war-table.js';
 import { createSettings } from '../core/settings.js';
 import { createBus } from '../core/bus.js';
 import { createRemote } from '../core/remote.js';
 import { startAutoUpdate } from '../core/autoupdate.js';
-import { remainingSeconds, countdownView } from '../core/countdown.js';
+import { remainingSeconds, countdownView, waxTotal } from '../core/countdown.js';
 
 const q = new URLSearchParams(location.search);
-const SHOT = q.get('shot') === '1';
+const SHOT = q.get('shot') === '1'; const X = (q.get('x')||'').split(',');
 if (SHOT) document.body.classList.add('shot');
 const $ = (id) => document.getElementById(id);
 
@@ -31,7 +32,7 @@ const cfg = () => {
 };
 let C = cfg();
 let total = 300;
-const setTotal = () => { const r = remainingSeconds(C.end, nowMs()); total = Math.max(C.min * 60, r == null ? 0 : r); };
+const setTotal = () => { const r = remainingSeconds(C.end, nowMs()); total = waxTotal(r, C.min * 60); };
 setTotal();
 
 function render() { // DOM side of the settings (the 3D side reads C every tick)
@@ -67,13 +68,21 @@ const AGE_AT = [0, 28, 58, 88];
 const AGE_NAMES = ['Dark Age', 'Feudal Age', 'Castle Age', 'Imperial Age'];
 const ROLLBACK = 112; // fog rolls back in, the village sinks back to the dark age
 
+// Capture hang (docs/capture.md): the heavy SwiftShader work used to run AFTER the load event (lazy table import + async build),
+// so the headless screenshot request arrived while the page was busy for ~20 s and never completed (4 of 5 runs).
+// Shot mode now does all of it before load: createTable is the statically imported factory (build runs synchronously inside
+// start(), stopped before any rAF frame) and the module awaits the finished shot at top level, like scenes/brb.js.
+let shotDone = Promise.resolve();
 const sc = createScene({
   canvasHost: $('gl'),
+  createTable: createWarTable,
   tableOpts: { board: false, candlePos: CANDLE, fov: 30, candle: { lightIntensity: 54 }, exposure: 1.1 },
-  build: (wt) => { wtRef = wt; build(wt).catch((e) => console.error('starting build', e)); },
+  // shot: stop BEFORE make() starts rAF (build() is async; stopping inside it let ~3 SwiftShader frames render first)
+  build: (wt) => { wtRef = wt; if (SHOT) sc.stop(); shotDone = build(wt).catch((e) => console.error('starting build', e)); },
 });
-import('../shared/war-table.js').then((m) => m.fitStage($('stage'))); // fit to the window like every scene page
+fitStage($('stage')); // fit to the window like every scene page
 sc.start();
+if (SHOT) await shotDone;
 
 async function build(wt) {
   const [WT, CP] = await Promise.all([import('../shared/war-table.js'), import('../shared/campaign.js')]);
@@ -82,7 +91,6 @@ async function build(wt) {
   const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
   const { scene, camera } = wt;
   const mats = getMaterials();
-  if (SHOT) sc.stop(); // captures advance the clock by hand
   wt.options.ambient = 0.2; wt.hemi.intensity = 0.2; wt.hemi.color.set(0x8a5e3a); // warm bounce from the parchment
   scene.environmentIntensity = 0.06;
   if (wt.rim) { wt.rim.color.set(0xffd2a0); wt.rim.intensity = 0.3; } // warm, faint: no cool glint on the table scratches
@@ -95,7 +103,7 @@ async function build(wt) {
     }
     gg.putImageData(im, 0, 0);
     const glow = wt.candle.userData.glow;
-    if (glow) { const gt = new THREE.CanvasTexture(gc); gt.colorSpace = THREE.SRGBColorSpace; glow.material.map = gt; glow.material.color.set(0xd8a878); glow.scale.set(0.85, 0.85, 1); glow.material.depthTest = false; glow.material.needsUpdate = true; }
+    if (glow && !X.includes('halo')) { const gt = new THREE.CanvasTexture(gc); gt.colorSpace = THREE.SRGBColorSpace; glow.material.map = gt; glow.material.color.set(0xd8a878); glow.scale.set(0.85, 0.85, 1); glow.material.depthTest = false; glow.material.needsUpdate = true; }
   }
   { // wax: warmer cream, low broad sheen (a hot pale sheen made the pillar read as frosted glass at this distance)
     const wm = wt.candle.userData.waxMaterial;
@@ -103,7 +111,7 @@ async function build(wt) {
   }
   { // table clear coat: scratches softened and roughness raised, so the candle's reflection is a broad glow, not a star
     const tm = wt.table && wt.table.material, rt = tm && tm.clearcoatRoughnessMap;
-    if (rt && rt.image) {
+    if (rt && rt.image && !X.includes('cc')) {
       const src = rt.image, c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
       const g = c.getContext('2d'); g.fillStyle = 'rgb(118,118,118)'; g.fillRect(0, 0, c.width, c.height);
       g.globalAlpha = 0.34; g.filter = 'blur(2.5px)'; g.drawImage(src, 0, 0);
@@ -111,8 +119,8 @@ async function build(wt) {
     }
   }
 
-  const map = makeCampaignMap({ width: 11, depth: 7.4, seed: 3, colour: 'red', village: { age: 'dark', colour: 'red' } });
-  scene.add(map); map.userData.attach(wt);
+  const map = X.includes('map') ? new THREE.Group() : makeCampaignMap({ width: 11, depth: 7.4, seed: 3, colour: 'red', village: { age: 'dark', colour: 'red' } });
+  scene.add(map); if (X.includes('map')) { map.userData = { attach() {}, features: { village: [0, 0], bridge: [0, 0], gold: [[0, 0], [0, 0]], stone: [[0, 0], [0, 0]] }, surfaceY: () => 0, width: 11, depth: 7.4, resetFog() {}, setAge() {}, reveal() {}, revealPath() {}, setFogOpacity() {} }; } map.userData.attach(wt);
   const U = map.userData, F = U.features, Y = U.surfaceY;
   const [VX, VZ] = F.village;
 
@@ -179,7 +187,7 @@ async function build(wt) {
     return g;
   }
   const PLAQUE = { pos: [-1.75, 0, 5.05], ry: 0.2 };
-  FONT_READY.then(() => { const p = makePlaque('PDBull', { width: 2.2, slope: 0.62 }); p.position.set(...PLAQUE.pos); p.rotation.y = PLAQUE.ry; scene.add(p); });
+  if (!X.includes('plaque')) FONT_READY.then(() => { const p = makePlaque('PDBull', { width: 2.2, slope: 0.62 }); p.position.set(...PLAQUE.pos); p.rotation.y = PLAQUE.ry; scene.add(p); });
 
   // ---------------------------------------------------------------- the loop: ages, fog, tokens
   // scout route: a closed loop through the map's features (smooth curve, arc-length parameterised)
@@ -316,13 +324,12 @@ async function build(wt) {
   });
 
   faceStatic(); candle.aimDrips(V3(6.5, 7.5, 12.5));
-  window.wt = wt; window.map = map; window.__bannerBlue = bB;
   if (SHOT) {
+    window.wt = wt; window.map = map; window.__bannerBlue = bB; // review/debug handles, capture mode only
     const T = q.has('t') ? +q.get('t') : 40;
-    FONT_READY.then(() => {
-      wt.advance(T);
-      const gl = wt.renderer.getContext(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
-      console.log('shot t=' + wt.time.toFixed(2));
-    });
+    await FONT_READY;
+    wt.advance(T);
+    const gl = wt.renderer.getContext(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+    console.log('shot t=' + wt.time.toFixed(2));
   }
 }
