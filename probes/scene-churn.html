@@ -32,7 +32,7 @@ for (let i = 1; i <= N; i++) {
   try {
     const sc = createScene({ canvasHost: host, build, tableOpts: { transparent: true, shadows: true, bloom: true, pixelRatio: 1 } });
     sc.start();
-    await sleep(120);
+    await sleep(300);
     const r = sc.wt.renderer;
     const peak = mem(r);
     sc.dispose();

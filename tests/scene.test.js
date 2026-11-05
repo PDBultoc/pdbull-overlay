@@ -136,3 +136,74 @@ test('dispose twice and stop before start are safe', () => {
   assert.equal(st.tables[0].log.rt, 2);
   assert.equal(st.pending(), 0);
 });
+
+test('onFrame calling dispose() does not throw and stops cleanly', () => {
+  const st = setup();
+  let sc;
+  sc = createScene({ canvasHost: {}, build() {}, onFrame: () => sc.dispose(), createTable: st.createTable });
+  sc.start();
+  assert.doesNotThrow(() => st.tickFrame());
+  assert.equal(sc.running, false);
+  assert.equal(st.pending(), 0);
+  assert.equal(st.tables[0].log.renders, 0);
+  assert.ok(st.tables[0].log.rendererDisposed);
+});
+
+function lazy(st) {
+  let resolve; let calls = 0;
+  const loadTable = () => { calls++; return new Promise((r) => { resolve = () => r(st.createTable); }); };
+  return { loadTable, release: async () => { resolve(); await new Promise((r) => setImmediate(r)); }, calls: () => calls };
+}
+
+test('lazy load: start then dispose then resolve builds nothing', async () => {
+  const st = setup(); const lz = lazy(st); let builds = 0;
+  const sc = createScene({ canvasHost: {}, build: () => builds++, loadTable: lz.loadTable });
+  sc.start(); sc.dispose();
+  await lz.release();
+  assert.equal(builds, 0); assert.equal(st.tables.length, 0); assert.equal(sc.running, false); assert.equal(st.pending(), 0);
+});
+
+test('lazy load: start then stop then resolve builds but does not run', async () => {
+  const st = setup(); const lz = lazy(st); let builds = 0;
+  const sc = createScene({ canvasHost: {}, build: () => builds++, loadTable: lz.loadTable });
+  sc.start(); sc.stop();
+  await lz.release();
+  assert.equal(builds, 1); assert.equal(st.tables.length, 1);
+  assert.equal(sc.running, false); assert.equal(st.pending(), 0);
+  sc.start();
+  assert.equal(builds, 1); assert.equal(sc.running, true);
+  sc.dispose();
+});
+
+test('lazy load: start twice builds once', async () => {
+  const st = setup(); const lz = lazy(st); let builds = 0;
+  const sc = createScene({ canvasHost: {}, build: () => builds++, loadTable: lz.loadTable });
+  sc.start(); sc.start();
+  await lz.release();
+  assert.equal(builds, 1); assert.equal(st.tables.length, 1); assert.equal(st.pending(), 1);
+  sc.dispose();
+});
+
+test('throwing build: half-built table disposed, error logged, scene startable again', () => {
+  const st = setup(); let n = 0; const errs = [];
+  const orig = console.error; console.error = (...a) => errs.push(a);
+  try {
+    const sc = createScene({ canvasHost: {}, build: () => { if (n++ === 0) throw new Error('boom'); }, createTable: st.createTable });
+    assert.doesNotThrow(() => sc.start());
+    assert.equal(sc.running, false); assert.equal(st.pending(), 0);
+    assert.ok(st.tables[0].log.rendererDisposed); assert.equal(errs.length, 1);
+    sc.start();
+    assert.equal(sc.running, true); assert.equal(st.tables.length, 2);
+    sc.dispose();
+  } finally { console.error = orig; }
+});
+
+test('dispose frees shadow maps and instanced meshes', () => {
+  const st = setup(); let shadow = 0, inst = 0;
+  const sc = createScene({ canvasHost: {}, build(wt) {
+    const orig = wt.scene.traverse;
+    wt.scene.traverse = (fn) => { orig(fn); fn({ isLight: true, shadow: { map: { dispose: () => shadow++ } } }); fn({ isInstancedMesh: true, dispose: () => inst++ }); };
+  }, createTable: st.createTable });
+  sc.start(); sc.dispose();
+  assert.equal(shadow, 1); assert.equal(inst, 1);
+});

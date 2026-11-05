@@ -17,6 +17,8 @@ async function loadDefault() {
 
 function freeObject3D(root, seen) {
   root.traverse((o) => {
+    if (o.isLight && o.shadow?.map?.dispose) o.shadow.map.dispose();
+    if ((o.isInstancedMesh || o.isSkinnedMesh) && o.dispose) o.dispose();
     if (o.geometry?.dispose) o.geometry.dispose();
     const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
     for (const m of mats) {
@@ -27,7 +29,29 @@ function freeObject3D(root, seen) {
   });
 }
 
-export function createScene({ canvasHost, build, onFrame, maxFps = 60, tableOpts = {}, createTable } = {}) {
+function teardown(t) {
+  t.dispose?.();
+  const seen = new Set();
+  if (t.scene) {
+    freeObject3D(t.scene, seen);
+    for (const k of ['environment', 'background']) { const v = t.scene[k]; if (v && v.isTexture && !seen.has(v)) { seen.add(v); v.dispose(); } }
+  }
+  const c = t.composer;
+  if (c) {
+    for (const rt of [c.renderTarget1, c.renderTarget2]) rt?.dispose?.();
+    for (const p of c.passes || []) p.dispose?.();
+    c.dispose?.();
+  }
+  const r = t.renderer;
+  if (r) {
+    const el = r.domElement;
+    r.dispose?.();
+    r.forceContextLoss?.();
+    el?.remove?.();
+  }
+}
+
+export function createScene({ canvasHost, build, onFrame, maxFps = 60, tableOpts = {}, createTable, loadTable = loadDefault } = {}) {
   let wt = null, raf = 0, wanted = false, active = false, last = 0, gen = 0, listening = false;
   const minGap = 1000 / maxFps - 1;
   const hidden = () => !!globalThis.document?.hidden;
@@ -39,9 +63,11 @@ export function createScene({ canvasHost, build, onFrame, maxFps = 60, tableOpts
     if (now - last < minGap) return;
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
-    wt.step(dt);
-    if (onFrame) onFrame(dt, wt);
-    wt.composer.render();
+    const t = wt;
+    t.step(dt);
+    if (onFrame) onFrame(dt, t);
+    if (!active || wt !== t) return; // onFrame may have called stop() or dispose()
+    t.composer.render();
   }
   function run() {
     if (active || !wt || !wanted || hidden()) return;
@@ -61,8 +87,14 @@ export function createScene({ canvasHost, build, onFrame, maxFps = 60, tableOpts
     if (on) d?.addEventListener('visibilitychange', onVis); else d?.removeEventListener('visibilitychange', onVis);
   }
   function make(factory) {
-    wt = factory(canvasHost, { ...tableOpts, autoStart: false });
-    if (build) build(wt);
+    const t = factory(canvasHost, { ...tableOpts, autoStart: false });
+    wt = t;
+    try { if (build) build(t); } catch (e) {
+      console.error('createScene: build() failed', e);
+      wt = null; wanted = false; halt();
+      try { teardown(t); } catch (e2) { console.error('createScene: teardown failed', e2); }
+      return;
+    }
     run();
   }
 
@@ -75,7 +107,10 @@ export function createScene({ canvasHost, build, onFrame, maxFps = 60, tableOpts
       if (wt) { run(); return api; }
       const my = ++gen;
       if (createTable || defaultFactory) { make(createTable || defaultFactory); return api; }
-      loadDefault().then((f) => { if (my === gen && wanted && !wt) make(f); });
+      loadTable().then((f) => {
+        if (my !== gen || wt) return;
+        make(f);
+      }, (e) => { if (my === gen) { wanted = false; console.error('createScene: load failed', e); } });
       return api;
     },
     stop() {
@@ -88,25 +123,7 @@ export function createScene({ canvasHost, build, onFrame, maxFps = 60, tableOpts
       halt(); listen(false);
       if (!wt) return api;
       const t = wt; wt = null;
-      t.dispose?.();
-      const seen = new Set();
-      if (t.scene) {
-        freeObject3D(t.scene, seen);
-        for (const k of ['environment', 'background']) { const v = t.scene[k]; if (v && v.isTexture && !seen.has(v)) { seen.add(v); v.dispose(); } }
-      }
-      const c = t.composer;
-      if (c) {
-        for (const rt of [c.renderTarget1, c.renderTarget2]) rt?.dispose?.();
-        for (const p of c.passes || []) p.dispose?.();
-        c.dispose?.();
-      }
-      const r = t.renderer;
-      if (r) {
-        const el = r.domElement;
-        r.dispose?.();
-        r.forceContextLoss?.();
-        el?.remove?.();
-      }
+      teardown(t);
       return api;
     },
   };
