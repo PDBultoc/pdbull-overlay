@@ -1,7 +1,8 @@
-# pdbull-overlay — NEXT (2026-11-05, production build done, waiting on Paul)
-- Branch `production` (from main b3f55e9), last commit 5b5c02f, version.json 2026-11-05.3; 129/129 node tests (`timeout 60 npm test`). Nothing pushed; no remote yet. Plan: docs/plans/2026-11-05-pdbull-overlay-production-plan.md; ledger/rulings: .superpowers/sdd/2026-11-05-pdbull-overlay-production-plan/progress.md (git-ignored).
-- DONE: T0 T1(Paul: dock↔source local path WORKS in OBS) T2 T3 T4 T5 T6 T7 T8 T9 + final whole-branch review + fix wave. Overlay renders intro/alerts (dbg-final-sheet).
-- WAITING on Paul: T11 verdict on docs/productie-2026-11-05.jpg (watch: darker umber fog in Starting; yellow vs grey banners in 3v3 intro).
-- NEXT: T10 (Paul pastes Streamlabs token in panel.html on http://127.0.0.1:8797, presses 4 Streamlabs "Test" alerts; save socket log → tests/fixtures/streamlabs-paul.json; verify tier/gift mapping, marked UNVERIFIED in core/streamlabs.js) → T12 (Paul runs `gh repo create PDBultoc/pdbull-overlay --public --source . --remote origin`; merge production→main on Paul's yes; push; Pages) → T13 INSTALL.md (Romanian; mention: don't toggle alert settings mid-alert; BRB `?q=low`) → T14 perf in OBS (watch document.hidden, fps <10 cutting alerts) → T15 live.
-- Local preview: preview_start "pdbull-site" (pdbull-overlay/.claude/launch.json, port 8797, repo root).
-- RULE (Paul 2026-11-05, after a PC freeze): never reproduce a hang by re-running; read code, find cause, fix. Headless captures only one at a time, never in retry loops. Starting Soon renders fine on the real GPU (checked in the built-in browser).
+# pdbull-overlay — NEXT (2026-11-05, published; waiting on Paul's OBS tests)
+- LIVE: github.com/PDBultoc/pdbull-overlay (public), Pages https://pdbultoc.github.io/pdbull-overlay/ (panel.html, overlay.html, scenes/starting.html, scenes/brb.html). main = c599476, version.json 2026-11-05.5, 138/138 node tests (`timeout 60 npm test`). Every code push must bump version.json (autoupdate every 2 min).
+- Plan docs/plans/2026-11-05-pdbull-overlay-production-plan.md: T0–T13 DONE (T1: OBS dock↔source local path works; T10: Paul's real Streamlabs log in tests/fixtures/streamlabs-paul.json, donation donor = `from`). Guide: docs/INSTALL.md (Romanian).
+- NEXT: T14 performance in OBS (Paul: AoE2 vs AI at 1440p, overlay hidden vs visible + 3 test alerts + test intro; read game FPS + OBS Stats). Pass = FPS drop ≤10 %, skipped/lagged ≤0.5 %. Fail order: bloom off on alerts, DPR 0.75, shadows off, intro maxFps 30; BRB `&q=low`. Watch: document.hidden on a visible source (alerts would be dropped), alerts cut below ~10 fps, blank frame when switching to Starting/BRB with "Shutdown when not visible".
+- Then T15 live gate on Paul's next stream.
+- OPEN for Paul: Twitch charity donation → donation letter? raid / powerUp later? (all ignored now). Gift subs unverified (no real sample).
+- Deferred minors: .superpowers/sdd/2026-11-05-pdbull-overlay-production-plan/progress.md (git-ignored ledger, rulings 1–15).
+- RULE (Paul): never reproduce a hang by re-running; read code, find cause, fix. Headless captures one at a time, never in retry loops.
