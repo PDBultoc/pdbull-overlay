@@ -190,10 +190,10 @@ export function eloText(r)                                         // -> '1834' 
 - [x] `timeout 60 npm test`; commit.
 
 ### S7: Visual sign-off sheet (controller → Paul)
-- [x] (sent 2026-11-05, waiting for Paul's ok) One contact sheet image (JPEG at 1920 px width, labelled): stinger frames 150/500/1000/1400/1700 ms over the game, end scene t=2/6/20 s, banner 1v1 + 4v4 over `shared/game.webp` at real size crop. Controller looks at it first, then sends it to Paul (SendUserFile). Paul's "ok" = gate.
+- [x] (Paul ok 2026-11-05) One contact sheet image (JPEG at 1920 px width, labelled): stinger frames 150/500/1000/1400/1700 ms over the game, end scene t=2/6/20 s, banner 1v1 + 4v4 over `shared/game.webp` at real size crop. Controller looks at it first, then sends it to Paul (SendUserFile). Paul's "ok" = gate.
 
 ### S8: Push (Paul's yes)
-- [ ] After Paul's yes: `git push`; wait for the Pages build; open `https://pdbultoc.github.io/pdbull-overlay/version.json` and confirm the new version string.
+- [x] (2026-11-05: pushed 9c3e123, Pages serves 2026-11-05.8) After Paul's yes: `git push`; wait for the Pages build; open `https://pdbultoc.github.io/pdbull-overlay/version.json` and confirm the new version string.
 
 ### S9: OBS gates on Paul's PC (each OBS change only with Paul's yes)
 - [ ] **Stinger alpha:** Paul sets the new file on the Stinger (S6 guide) and switches Joc → BRB → Joc. Pass = scroll over the game with no black box, scene changes hidden under the paper. Fail → Track Matte fallback (Risks row 1), one attempt.
