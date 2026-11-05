@@ -35,12 +35,17 @@ function buildWood(W, rnd) {
     g.fillStyle = dark ? `rgba(14,7,3,${0.12 + rnd() * 0.22})` : `rgba(150,96,52,${0.05 + rnd() * 0.1})`;
     g.fillRect(x, y, len, 1);
   }
-  for (let i = 0; i < 9; i++) {            // a few darker knots / marks so rotation reads clearly
-    const x = rnd() * W, y = rnd() * TH, rx = 30 + rnd() * 90, ry = 3 + rnd() * 6;
+  for (let i = 0; i < 12; i++) {           // darker knots, stronger and taller, so the rotation reads clearly
+    const x = rnd() * W, y = rnd() * TH, rx = 40 + rnd() * 110, ry = 7 + rnd() * 12;
     const gr = g.createRadialGradient(x, y, 0, x, y, rx);
-    gr.addColorStop(0, 'rgba(12,6,2,.55)'); gr.addColorStop(1, 'rgba(12,6,2,0)');
+    gr.addColorStop(0, 'rgba(8,4,1,.95)'); gr.addColorStop(0.45, 'rgba(12,6,2,.55)'); gr.addColorStop(1, 'rgba(12,6,2,0)');
     g.save(); g.translate(x, y); g.scale(1, ry / rx); g.translate(-x, -y); g.fillStyle = gr; g.fillRect(x - rx, y - rx, rx * 2, rx * 2); g.restore();
   }
+  // two pale stripes and a dark band running along the roller: one full turn is easy to follow
+  g.fillStyle = 'rgba(214,150,84,.55)'; g.fillRect(0, 56, W, 9);
+  g.fillStyle = 'rgba(214,150,84,.35)'; g.fillRect(0, 232, W, 5);
+  g.fillStyle = 'rgba(6,3,1,.7)'; g.fillRect(0, 150, W, 14);
+  g.fillStyle = 'rgba(6,3,1,.45)'; g.fillRect(0, 300, W, 4);
   return c;
 }
 
@@ -245,10 +250,11 @@ function rollerY(t, Y0, Y1) {
 
 export async function create(W, H) {
   const rnd = mulberry32(20261105);
-  try { await Promise.race([Promise.all([document.fonts.load('700 56px Cinzel'), document.fonts.load('italic 600 24px "Cormorant Garamond"')]), new Promise((r) => setTimeout(r, 400))]); } catch (e) { /* fall back to Georgia */ }
+  // wait for the fonts so every render is the same; fall back to Georgia after 1.5 s
+  try { await Promise.race([Promise.all([document.fonts.load('600 40px Cinzel'), document.fonts.load('700 56px Cinzel'), document.fonts.load('italic 600 24px "Cormorant Garamond"')]), new Promise((r) => setTimeout(r, 1500))]); } catch (e) { /* fall back to Georgia */ }
   const paper = buildPaper(W, H, rnd, true);
   const wood = buildWood(W, rnd), TH = wood.height;
-  const Y0 = -(R + 46), Y1 = H - 14;
+  const Y0 = -(R + 8), Y1 = H - 14;   // parked just above the edge, so the entry and the roll-back are on screen
 
   function draw(ctx, t) {
     const yf = rollerY(t, Y0, Y1), y = Math.round(yf);
@@ -256,9 +262,9 @@ export async function create(W, H) {
     // soft shadow falling ahead of the roll onto what is underneath
     const vis = smooth(Y0, 0, yf);
     if (vis > 0 && y + R < H) {
-      const s0 = y + R - 4, sg = ctx.createLinearGradient(0, s0, 0, s0 + 170);
-      sg.addColorStop(0, `rgba(12,6,2,${0.62 * vis})`); sg.addColorStop(0.3, `rgba(12,6,2,${0.26 * vis})`); sg.addColorStop(1, 'rgba(12,6,2,0)');
-      ctx.fillStyle = sg; ctx.fillRect(0, s0, W, 170);
+      const SH = 320, s0 = y + R - 4, sg = ctx.createLinearGradient(0, s0, 0, s0 + SH);
+      sg.addColorStop(0, `rgba(10,5,2,${0.88 * vis})`); sg.addColorStop(0.25, `rgba(10,5,2,${0.55 * vis})`); sg.addColorStop(0.6, `rgba(10,5,2,${0.2 * vis})`); sg.addColorStop(1, 'rgba(10,5,2,0)');
+      ctx.fillStyle = sg; ctx.fillRect(0, s0, W, SH);
     }
     // parchment above the roller
     const ph = Math.min(H, Math.max(0, y));

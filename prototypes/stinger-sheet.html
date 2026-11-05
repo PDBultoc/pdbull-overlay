@@ -21,7 +21,7 @@
 <script type="module">
 // 7 frames per stinger over the game capture; the red frame is the cut point (OBS switches scene there).
 const W = 1920, H = 1080, S = 0.25;
-const list = [['a', './stingers/seal.js'], ['b', './stingers/scroll.js'], ['c', './stingers/smoke.js']];
+const list = [['a', './stingers/seal.js'], ['b', '../shared/stingers/scroll.js'], ['c', './stingers/smoke.js']];
 const game = new Image(); game.src = '../shared/game.webp';
 await new Promise((r) => { if (game.complete) r(); game.onload = game.onerror = r; setTimeout(r, 2000); }); // not decode(): hangs on a hidden window
 const big = document.createElement('canvas'); big.width = W; big.height = H; const bg = big.getContext('2d');

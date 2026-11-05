@@ -5,7 +5,7 @@
 //   export async function create(W, H) -> { draw(ctx, tMs) }  // draws frame tMs on a cleared transparent W×H 2D context;
 //                                                               // deterministic in tMs (same t -> same frame, any call order)
 //   export function sfx(ac, dest, when)                        // schedules the transition's sound at AudioContext time `when`
-const MODULES = { a: './stingers/seal.js', b: './stingers/scroll.js', c: './stingers/smoke.js' };
+const MODULES = { a: './stingers/seal.js', b: '../shared/stingers/scroll.js', c: './stingers/smoke.js' };
 const Q = new URLSearchParams(location.search);
 const V = MODULES[Q.get('v')] ? Q.get('v') : 'a';
 const W = 1920, H = 1080;

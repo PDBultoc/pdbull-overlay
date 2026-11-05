@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stinger offline render</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<style>
+  html, body { margin: 0; background: #0b0806; color: #e9dcc2; font: 20px/1.4 sans-serif; }
+  #status { padding: 16px; font-variant-numeric: tabular-nums; }
+  canvas { display: block; width: 960px; height: 540px; margin: 0 16px; background: #222; }
+</style>
+</head>
+<body>
+<div id="status">starting…</div>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script type="module" src="./stinger-render.js"></script>
+</body>
+</html>
