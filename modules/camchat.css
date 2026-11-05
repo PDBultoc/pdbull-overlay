@@ -1,0 +1,50 @@
+/* camchat - D1 walnut and brass (ported from prototypes/camchat.css, scoped) */
+[data-mod=camchat] { --chat-bottom: 190px; }
+[data-mod=camchat] .cam { position: absolute; left: 8px; top: 755px; width: 322px; height: 180px; box-sizing: border-box;
+  border: 6px solid transparent;
+  border-image: linear-gradient(135deg, #5d3c23 0%, #2b1a0f 34%, #4b2f1c 62%, #1f130b 100%) 1;
+  box-shadow: 0 8px 26px rgba(0,0,0,.6), 0 1px 3px rgba(0,0,0,.7), inset 0 0 0 1px rgba(227,196,138,.22); }
+[data-mod=camchat] .cam::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(201,165,106,.55); }
+/* the window stays transparent in OBS (the real camera shows through); the placeholder only draws with ?cam=1 */
+[data-mod=camchat] .cam-window { position: absolute; inset: 0; overflow: hidden; box-sizing: border-box;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.8), inset 0 0 22px rgba(0,0,0,.55); }
+[data-mod=camchat] .webcam { position: absolute; inset: 0; display: none;
+  background: radial-gradient(120% 120% at 30% 15%, #3a2c22 0%, #20170f 55%, #120d09 100%); }
+body.cam [data-mod=camchat] .webcam { display: block; }
+[data-mod=camchat] .wc-light { position: absolute; inset: 0; background: radial-gradient(60% 80% at 8% 20%, rgba(255,190,110,.20), transparent 70%); }
+[data-mod=camchat] .wc-head { position: absolute; left: 50%; top: 17%; width: 19%; height: 42%; transform: translateX(-50%);
+  border-radius: 48% 48% 44% 44% / 52% 52% 48% 48%; background: radial-gradient(75% 70% at 38% 30%, #5a4433, #2a1d14 85%); filter: blur(1.6px); }
+[data-mod=camchat] .wc-neck { position: absolute; left: 50%; top: 50%; width: 9%; height: 18%; transform: translateX(-50%);
+  background: linear-gradient(180deg, #2c1f16, #3a2b1f); filter: blur(1.5px); }
+[data-mod=camchat] .wc-shoulders { position: absolute; left: 50%; top: 62%; width: 58%; height: 80%; transform: translateX(-50%);
+  border-radius: 50% 50% 0 0 / 60% 60% 0 0; background: radial-gradient(80% 90% at 42% 8%, #4a382a, #1a110b 88%); filter: blur(2px); }
+[data-mod=camchat] .wc-grain { position: absolute; inset: 0; box-shadow: inset 0 0 40px rgba(0,0,0,.55); }
+[data-mod=camchat] .cam .k { display: block; position: absolute; width: 20px; height: 20px; z-index: 3;
+  background: linear-gradient(135deg, var(--brass-300), var(--brass-500) 48%, var(--brass-700));
+  -webkit-mask: linear-gradient(#000 0 0) top/100% 4px no-repeat, linear-gradient(#000 0 0) left/4px 100% no-repeat;
+          mask: linear-gradient(#000 0 0) top/100% 4px no-repeat, linear-gradient(#000 0 0) left/4px 100% no-repeat;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.8)); }
+[data-mod=camchat] .cam .k-tl { left: -9px; top: -9px; }
+[data-mod=camchat] .cam .k-tr { right: -9px; top: -9px; transform: scaleX(-1); }
+[data-mod=camchat] .cam .k-bl { left: -9px; bottom: -9px; transform: scaleY(-1); }
+[data-mod=camchat] .cam .k-br { right: -9px; bottom: -9px; transform: scale(-1,-1); }
+
+[data-mod=camchat] .chat { position: absolute; left: 1600px; width: 312px; bottom: var(--chat-bottom, 190px);
+  display: flex; flex-direction: column; justify-content: flex-end; pointer-events: none; transition: bottom .6s ease; }
+[data-mod=camchat] .chat .m { display: grid; grid-template-rows: 0fr; opacity: 0;
+  transition: grid-template-rows .7s var(--ease-heavy, ease), opacity .6s ease; }
+[data-mod=camchat] .chat .m.in { grid-template-rows: 1fr; opacity: 1; }
+[data-mod=camchat] .chat .m.out { grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .9s ease .2s, opacity .8s ease; }
+[data-mod=camchat] .chat .m > .inner { min-height: 0; overflow: hidden; padding: 3px 6px 3px 4px; }
+[data-mod=camchat] .chat .msg { position: relative; font-family: var(--font-ui); font-size: 17px; line-height: 1.38; color: var(--text-light);
+  word-wrap: break-word; overflow-wrap: anywhere; padding: 7px 12px 8px 13px; border-radius: 3px;
+  background: linear-gradient(90deg, rgba(34,21,13,.90), rgba(22,13,8,.82));
+  box-shadow: 0 3px 10px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,220,160,.07), inset 0 0 0 1px rgba(201,165,106,.14); }
+[data-mod=camchat] .chat .msg::before { content: ""; position: absolute; left: 0; top: 5px; bottom: 5px; width: 2px;
+  background: linear-gradient(180deg, var(--brass-300), var(--brass-600)); border-radius: 2px; }
+[data-mod=camchat] .chat .nm { font-weight: 600; }
+[data-mod=camchat] .chat .tx { font-weight: 400; }
+[data-mod=camchat] .chat img.emote { height: 24px; width: 24px; vertical-align: -6px; margin: 0 1px; }
+[data-mod=camchat] .chat .m.in .msg { animation: camchat-rise .7s var(--ease-heavy, ease) both; }
+@keyframes camchat-rise { from { transform: translateY(16px); } to { transform: none; } }
