@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createSettings } from '../core/settings.js';
 import { stripSecrets } from '../core/remote.js';
 import { normalizeMatch } from '../core/aoe2.js';
-import { countdownEnd, roomLinks, testEvent, TEST_ALERTS, fakeMatch4v4, latestUpdate, MAX_NAME, TEST_MATCHES } from '../core/panelcore.js';
+import { countdownEnd, roomLinks, testEvent, TEST_ALERTS, fakeMatch4v4, latestUpdate, MAX_NAME, TEST_MATCHES, coerceField } from '../core/panelcore.js';
 
 const mem = () => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; };
 const PA = JSON.parse(readFileSync(new URL('./fixtures/pa100.json', import.meta.url)));
@@ -111,4 +111,11 @@ test('real events update latest.* only for follow/sub/donation', () => {
   assert.deepEqual(latestUpdate({ type: 'donation', name: 'c', amount: 5 }), ['latest.donation', 'c']);
   assert.equal(latestUpdate({ type: 'bits', name: 'd' }), null);
   assert.equal(latestUpdate(null), null);
+});
+
+test('number and range fields write numbers, not strings', () => {
+  assert.equal(coerceField('range', '0.35'), 0.35);
+  assert.equal(coerceField('number', '5'), 5);
+  assert.ok(Number.isNaN(coerceField('range', 'abc')));
+  assert.equal(coerceField('text', '0.35'), '0.35');
 });

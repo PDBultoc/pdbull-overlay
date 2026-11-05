@@ -5,7 +5,7 @@ import { startAutoUpdate } from './core/autoupdate.js';
 import { createRemote, newRoom, stripSecrets } from './core/remote.js';
 import { connectStreamlabs } from './core/streamlabs.js';
 import { normalizeMatch } from './core/aoe2.js';
-import { countdownEnd, roomLinks, testEvent, TEST_ALERTS, TEST_MATCHES, latestUpdate, createSender, createRawLog } from './core/panelcore.js';
+import { coerceField, countdownEnd, roomLinks, testEvent, TEST_ALERTS, TEST_MATCHES, latestUpdate, createSender, createRawLog } from './core/panelcore.js';
 
 function boot() {
   const settings = createSettings(localStorage, 'pdbull.v1');
@@ -53,8 +53,8 @@ function boot() {
     const input = el('input', { id, type: kind, ...attrs });
     const show = () => { if (document.activeElement !== input) input.value = getp(path) ?? ''; };
     input.addEventListener('change', () => {
-      let v = input.value;
-      if (kind === 'number') { v = Number(v); if (!Number.isFinite(v)) { show(); return; } }
+      const v = coerceField(kind, input.value);
+      if ((kind === 'number' || kind === 'range') && !Number.isFinite(v)) { show(); return; }
       write(path, v);
     });
     refreshers.push(show); show();

@@ -20,6 +20,11 @@ export function countdownEnd(minutes, now = Date.now()) {
   return now + Math.round(m * 60000);
 }
 
+// Dock input value -> what gets stored: number and range inputs give strings, settings need numbers.
+export function coerceField(kind, raw) {
+  return kind === 'number' || kind === 'range' ? Number(raw) : raw;
+}
+
 export function roomLinks(room, panelUrl) {
   const q = '?room=' + room;
   const at = (p) => new URL(p + q, panelUrl).href;
