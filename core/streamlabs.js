@@ -75,13 +75,14 @@ export function mapLabels(raw) {
 }
 
 // socket.io v2 client (window.io) is loaded by the panel from cdnjs only when a token is set.
-export function connectStreamlabs({ token, onEvent, onStatus = () => {}, io = globalThis.io }) {
+export function connectStreamlabs({ token, onEvent, onStatus = () => {}, io = globalThis.io, onRaw = null }) {
   if (!token || typeof io !== 'function') { onStatus({ source: 'streamlabs', ok: false, reason: token ? 'client not loaded' : 'no token' }); return { close() {} }; }
   const s = io('https://sockets.streamlabs.com?token=' + encodeURIComponent(token), { transports: ['websocket'] });
   s.on('connect', () => onStatus({ source: 'streamlabs', ok: true }));
   s.on('connect_error', () => onStatus({ source: 'streamlabs', ok: false, reason: 'cannot connect (token?)' }));
   s.on('disconnect', () => onStatus({ source: 'streamlabs', ok: false, reason: 'disconnected' }));
   s.on('event', (raw) => {
+    if (onRaw) { try { onRaw(raw); } catch { /* keep going */ } }
     const labels = mapLabels(raw);
     if (labels) { try { onEvent({ type: 'latest-snapshot', latest: labels }); } catch { /* keep going */ } return; }
     for (const e of mapEvent(raw)) { try { onEvent(e); } catch { /* keep going */ } }

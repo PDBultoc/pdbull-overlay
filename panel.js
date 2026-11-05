@@ -5,7 +5,7 @@ import { startAutoUpdate } from './core/autoupdate.js';
 import { createRemote, newRoom, stripSecrets } from './core/remote.js';
 import { connectStreamlabs } from './core/streamlabs.js';
 import { normalizeMatch } from './core/aoe2.js';
-import { countdownEnd, roomLinks, testEvent, TEST_ALERTS, latestUpdate, createSender } from './core/panelcore.js';
+import { countdownEnd, roomLinks, testEvent, TEST_ALERTS, latestUpdate, createSender, createRawLog } from './core/panelcore.js';
 
 function boot() {
   const settings = createSettings(localStorage, 'pdbull.v1');
@@ -107,9 +107,25 @@ function boot() {
 
   const brbCard = card('BRB', [field('Text', 'scenes.brbText')]);
 
+  const rawLog = createRawLog(50);
+  const logCount = el('span', { text: 'Streamlabs log: 0 messages' });
+  const showLog = () => { const n = rawLog.list().length; logCount.textContent = 'Streamlabs log: ' + n + ' message' + (n === 1 ? '' : 's'); };
+  const saveLog = () => {
+    const blob = new Blob([JSON.stringify(rawLog.list(), null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = el('a', { href: url, download: 'streamlabs-log.json' });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   const alertsCard = card('Alerts', [
     field('Streamlabs token', 'modules.alerts.streamlabsToken', 'password', { autocomplete: 'off' }),
     el('div', { class: 'note', text: 'Stays in this panel only; never sent to the room.' }),
+    el('div', { class: 'row slog' }, [
+      logCount,
+      el('button', { type: 'button', text: 'Save log', onclick: saveLog }),
+      el('button', { type: 'button', text: 'Clear', onclick: () => { rawLog.clear(); showLog(); } }),
+    ]),
     el('div', { class: 'chk' }, [...['follow', 'sub', 'bits', 'donation'].map((k) => check(k, 'modules.alerts.' + k)), check('sound', 'modules.alerts.sound')]),
     ...['follow', 'sub', 'bits', 'donation'].map((k) => field('Sound ' + k, 'modules.alerts.sounds.' + k, 'url', { placeholder: 'URL (empty = built-in)' })),
     el('div', { class: 'btns' }, TEST_ALERTS.map((t) => el('button', { type: 'button', text: t.label, onclick: () => fire(t.key) }))),
@@ -157,6 +173,7 @@ function boot() {
         if (u) write(u[0], u[1]);
       },
       onStatus: (st) => bus.emit('status', st),
+      onRaw: (raw) => { rawLog.push(raw); showLog(); },
     });
   };
   onTokenWrite = syncStreamlabs;

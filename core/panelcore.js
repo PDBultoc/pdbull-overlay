@@ -95,3 +95,19 @@ export function latestUpdate(e) {
   if (e.type === 'donation') return ['latest.donation', e.name];
   return null;
 }
+
+// Last `max` raw Streamlabs socket messages, copied (JSON round-trip), token keys dropped, with receive time.
+export function createRawLog(max = 50) {
+  let items = [];
+  const clean = (k, v) => (/^(streamlabs)?token$/i.test(k) ? undefined : v);
+  return {
+    push(raw) {
+      let copy;
+      try { copy = JSON.parse(JSON.stringify(raw, clean)); } catch { return; }
+      items.push({ t: Date.now(), raw: copy });
+      if (items.length > max) items = items.slice(-max);
+    },
+    list: () => items.slice(),
+    clear() { items = []; },
+  };
+}
