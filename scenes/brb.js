@@ -231,8 +231,7 @@ function build(wt) {
     const far = new THREE.PointLight(0xff9a52, 22, 0, 2); far.position.set(5.6, 1.5, -6.2); wt.scene.add(far);
     // a second, higher warm fill over the far table (the same off-frame candles) so walnut continues behind the map
     const far2 = new THREE.PointLight(0xff9448, 60, 0, 2); far2.position.set(-3, 1.2, -9); wt.scene.add(far2);
-    // the room fog (tuned for a close board) swallowed everything past ~15 units into black: thin it
-    if (wt.scene.fog) wt.scene.fog.density = 0.008;
+    // (the room fog, tuned for a close board, swallowed everything past ~15 units into black: thinned by tableOpts.fogDensity)
     // fix round 1: the far (right) half of the map still read dim. A low warm fill over it (candle mood kept: it is
     // a pool, not even room light) plus a faint warm falloff on the wall and sky so the table edge is not a hard black void.
     const far3 = new THREE.PointLight(0xffa05a, 28, 0, 2); far3.position.set(4.6, 3.4, 0.6); wt.scene.add(far3);
@@ -355,7 +354,7 @@ const stage = createScene({
   build,
   maxFps: 60,
   tableOpts: {
-    board: false, candlePos: [-2.9, 0, 6.3], candle: { height: 1.05, lightIntensity: 26, shadowRadius: 8 },
+    board: false, fogDensity: 0.008, candlePos: [-2.9, 0, 6.3], candle: { height: 1.05, lightIntensity: 26, shadowRadius: 8 },
     bloom: { strength: 0.32, radius: 0.4, threshold: 2.3 }, exposure: 0.92,
   },
 });
