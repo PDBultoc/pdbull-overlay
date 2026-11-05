@@ -5,7 +5,7 @@ import { startAutoUpdate } from './core/autoupdate.js';
 import { createRemote, newRoom, stripSecrets } from './core/remote.js';
 import { connectStreamlabs } from './core/streamlabs.js';
 import { normalizeMatch } from './core/aoe2.js';
-import { countdownEnd, roomLinks, testEvent, TEST_ALERTS, latestUpdate, createSender, createRawLog } from './core/panelcore.js';
+import { countdownEnd, roomLinks, testEvent, TEST_ALERTS, TEST_MATCHES, latestUpdate, createSender, createRawLog } from './core/panelcore.js';
 
 function boot() {
   const settings = createSettings(localStorage, 'pdbull.v1');
@@ -136,7 +136,25 @@ function boot() {
     el('button', { type: 'button', text: 'Test intro 4v4', onclick: () => fire('intro4v4') }),
   ])]);
 
-  $('cards').append(startingCard, brbCard, alertsCard, introCard);
+  const fireBanner = (k) => {
+    const now = Date.now();
+    send('match-running', { type: 'match-running', id: `test-banner-${k}-${now}`, match: { ...TEST_MATCHES[k], id: `test-banner-${k}-${now}` } });
+  };
+  const ambVol = el('span', { class: 'note' });
+  const showVol = () => { ambVol.textContent = 'Volume ' + Number(getp('ambience.volume') ?? 0).toFixed(2); };
+  refreshers.push(showVol); showVol();
+  const ambVolField = field('Volume', 'ambience.volume', 'range', { min: '0', max: '1', step: '0.05' });
+  ambVolField.querySelector('input').addEventListener('input', showVol);
+  const ambienceCard = card('Ambience', [check('Enabled', 'ambience.enabled'), ambVolField, ambVol]);
+  const bannerCard = card('Match banner', [
+    check('Enabled', 'modules.matchbar.enabled'),
+    el('div', { class: 'btns' }, [
+      el('button', { type: 'button', text: 'Test banner 1v1', onclick: () => fireBanner('1v1') }),
+      el('button', { type: 'button', text: 'Test banner 4v4', onclick: () => fireBanner('4v4') }),
+    ]),
+  ]);
+
+  $('cards').append(startingCard, brbCard, ambienceCard, alertsCard, introCard, bannerCard);
 
   // --- room + links
   $('room').textContent = room;
@@ -148,6 +166,7 @@ function boot() {
   $('copyOverlay').addEventListener('click', copy(links.overlay));
   $('copyStarting').addEventListener('click', copy(links.starting));
   $('copyBrb').addEventListener('click', copy(links.brb));
+  $('copyEnd').addEventListener('click', copy(links.ending));
   remote.start().then(() => remote.publish(settings.get()));
 
   // --- Streamlabs: this panel holds the token and forwards only the events.

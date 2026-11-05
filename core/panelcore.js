@@ -23,8 +23,41 @@ export function countdownEnd(minutes, now = Date.now()) {
 export function roomLinks(room, panelUrl) {
   const q = '?room=' + room;
   const at = (p) => new URL(p + q, panelUrl).href;
-  return { overlay: at('overlay.html'), starting: at('scenes/starting.html'), brb: at('scenes/brb.html') };
+  return { overlay: at('overlay.html'), starting: at('scenes/starting.html'), brb: at('scenes/brb.html'), ending: at('scenes/ending.html') };
 }
+
+// Demo matches for the dock's banner test buttons: exactly what normalizeMatch (core/aoe2.js)
+// returns, so a match-running event carries the same shape as a live one.
+const demoPlayer = (profileId, name, civ, rating, colorHex, country) =>
+  ({ profileId, name, civ, rating, ratingDiff: null, won: null, colorHex, country });
+function demoMatch(id, mode, map, leaderboard, myTeam, enemies) {
+  const me = myTeam[0];
+  return {
+    id, started: '2026-11-05T12:00:00Z', finished: null, running: true, mode, map,
+    lobby: 'Test lobby', leaderboard, hideCivs: false,
+    me, myTeam, enemies, won: null, ratingDiff: null,
+  };
+}
+const t1 = [
+  demoPlayer(551021, 'PDBull', 'Franks', 1620, '#0000ff', 'RO'),
+  demoPlayer(900002, 'Ragnar_the_Unstoppable_01', 'Vikings', 1587, '#ff0000', 'SE'),
+];
+const t4a = [
+  demoPlayer(551021, 'PDBull', 'Franks', 1620, '#0000ff', 'RO'),
+  demoPlayer(900102, 'Kasia', 'Poles', 1485, '#00ff00', 'PL'),
+  demoPlayer(900103, 'Ragnar_the_Unstoppable_01', 'Vikings', null, '#ffff00', 'SE'),
+  demoPlayer(900104, 'Tamerlan', 'Tatars', 1710, '#00ffff', 'KZ'),
+];
+const t4b = [
+  demoPlayer(900105, 'Wolfhound', 'Lithuanians', 1390, '#ff0000', 'LT'),
+  demoPlayer(900106, 'SaladinFan', 'Saracens', 1555, '#ff00ff', 'EG'),
+  demoPlayer(900107, 'Nikephoros', 'Byzantines', 1440, '#808080', 'GR'),
+  demoPlayer(900108, 'Mongol_Mike', 'Mongols', 1660, '#ff8000', 'US'),
+];
+export const TEST_MATCHES = {
+  '1v1': demoMatch('test-banner-1v1', '1v1', 'Arabia', 'RM 1v1', [t1[0]], [[t1[1]]]),
+  '4v4': demoMatch('test-banner-4v4', 'tg', 'Arena', 'Team Random Map', t4a, [t4b]),
+};
 
 const COLORS = ['red', 'blue', 'green', 'yellow', 'teal', 'purple', 'grey', 'orange'];
 const HEX = { red: '#ff0000', blue: '#0000ff', green: '#00ff00', yellow: '#ffff00', teal: '#00ffff', purple: '#ff00ff', grey: '#808080', orange: '#ff8000' };

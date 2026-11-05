@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createSettings } from '../core/settings.js';
 import { stripSecrets } from '../core/remote.js';
 import { normalizeMatch } from '../core/aoe2.js';
-import { countdownEnd, roomLinks, testEvent, TEST_ALERTS, fakeMatch4v4, latestUpdate, MAX_NAME } from '../core/panelcore.js';
+import { countdownEnd, roomLinks, testEvent, TEST_ALERTS, fakeMatch4v4, latestUpdate, MAX_NAME, TEST_MATCHES } from '../core/panelcore.js';
 
 const mem = () => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; };
 const PA = JSON.parse(readFileSync(new URL('./fixtures/pa100.json', import.meta.url)));
@@ -28,6 +28,37 @@ test('room links are relative to the panel url', () => {
   assert.equal(l.overlay, 'https://x.github.io/pdbull-overlay/overlay.html?room=abc123');
   assert.equal(l.starting, 'https://x.github.io/pdbull-overlay/scenes/starting.html?room=abc123');
   assert.equal(l.brb, 'https://x.github.io/pdbull-overlay/scenes/brb.html?room=abc123');
+});
+
+test('room links include the ending scene', () => {
+  assert.equal(roomLinks('abc', 'https://pdbultoc.github.io/pdbull-overlay/panel.html').ending,
+    'https://pdbultoc.github.io/pdbull-overlay/scenes/ending.html?room=abc');
+});
+
+test('TEST_MATCHES have the normalizeMatch shape', async () => {
+  const { normalizeMatch } = await import('../core/aoe2.js');
+  const fs = await import('node:fs');
+  const real = normalizeMatch(JSON.parse(fs.readFileSync(new URL('./fixtures/pa100.json', import.meta.url), 'utf8'))[0], 551021);
+  assert.deepEqual(Object.keys(TEST_MATCHES).sort(), ['1v1', '4v4']);
+  for (const m of Object.values(TEST_MATCHES)) {
+    assert.deepEqual(Object.keys(m).sort(), Object.keys(real).sort());
+    assert.deepEqual(Object.keys(m.me).sort(), Object.keys(real.me).sort());
+    assert.equal(m.running, true);
+    assert.equal(m.me.profileId, 551021);
+    assert.equal(m.me.name, 'PDBull');
+    assert.ok(m.myTeam.includes(m.me));
+  }
+  const a = TEST_MATCHES['1v1'];
+  assert.equal(a.mode, '1v1');
+  assert.equal(a.enemies.length, 1);
+  assert.equal(a.enemies[0][0].name, 'Ragnar_the_Unstoppable_01');
+  assert.equal(a.enemies[0][0].name.length, 25);
+  const b = TEST_MATCHES['4v4'];
+  assert.equal(b.mode, 'tg');
+  const all = [...b.myTeam, ...b.enemies.flat()];
+  assert.equal(all.length, 8);
+  assert.equal(b.myTeam.length, 4);
+  assert.equal(all.filter((p) => p.rating === null).length, 1);
 });
 
 test('test buttons emit the documented alert payloads', () => {

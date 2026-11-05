@@ -40,6 +40,19 @@ test('deep-merge keeps new default keys', () => {
   assert.equal(g.modules.camchat.lines, 7);
 });
 
+test('round-3 defaults merge into an old stored object without losing keys', () => {
+  const st = mem({ 'pdbull.v1': JSON.stringify({ profileId: 1, scenes: { brbText: 'Back soon' }, modules: { camchat: { channel: 'x' } } }) });
+  const g = createSettings(st).get();
+  assert.deepEqual(g.ambience, { enabled: true, volume: 0.6 });
+  assert.deepEqual(g.modules.matchbar, { enabled: true });
+  assert.equal(g.scenes.brbText, 'Back soon');
+  assert.equal(g.scenes.countdownMin, 5);
+  assert.equal(g.modules.camchat.channel, 'x');
+  assert.equal(g.modules.camchat.lines, 7);
+  assert.equal(g.modules.alerts.enabled, true);
+  assert.equal(g.profileId, 1);
+});
+
 test('bad JSON gives defaults', () => {
   const s = createSettings(mem({ 'pdbull.v1': '{nope' }));
   assert.deepEqual(s.get(), DEFAULTS);

@@ -80,6 +80,15 @@
         ],
         "createdAt": "2026-11-05T13:15:07.421Z",
         "reason": "Claude: tracking only on short uppercase h1 labels of the internal prototype index (round 2 styling)"
+      },
+      {
+        "rule": "organic-clip-path",
+        "value": "*",
+        "files": [
+          "prototypes/matchbar.html"
+        ],
+        "createdAt": "2026-11-05T13:54:14.267Z",
+        "reason": "Claude: torn edge belongs to banner variant 2 (parchment slip), which Paul did not pick; prototype-only, production ports only v1 brass plaque"
       }
     ]
   }

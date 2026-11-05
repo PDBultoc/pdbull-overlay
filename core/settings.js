@@ -3,7 +3,9 @@ export const DEFAULTS = {
   profileId: 551021, pollSec: 20,
   scenes: { countdownEnd: null, countdownMin: 5, brbText: 'Be right back' },
   latest: { follower: '', subscriber: '', donation: '' },
+  ambience: { enabled: true, volume: 0.6 },
   modules: {
+    matchbar: { enabled: true },
     camchat: { enabled: true, channel: 'pdbull', lines: 7 },
     intro: { enabled: true, minSeconds: 6 },
     alerts: { enabled: true, follow: true, sub: true, bits: true, donation: true, sound: true,

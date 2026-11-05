@@ -1,1 +1,1 @@
-export const MODULES = ['camchat','intro','alerts'];
+export const MODULES = ['camchat', 'intro', 'alerts', 'matchbar'];
