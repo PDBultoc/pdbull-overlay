@@ -28,9 +28,11 @@
 //        ages        the village in all four ages, side by side
 //        tokenart    2D sheet of the painted token faces (no WebGL)
 //        alpha       transparent canvas + bloom: logs canvas alpha at empty and drawn pixels
+//        props       close-up of the four resource props + red/blue/green banners under the candle
+//        apicheck    T2 API self-check (candle lightOffset, DOF order, fog opacity/colour, cloth presets): console APICHECK lines
 // ?shot=1&t=<sec>    stop the clock and render exactly once at t (deterministic screenshots)
 import { createWarTable, makePiece, makeFigurine, fitStage, THREE } from './war-table.js';
-import { makeCampaignMap, makeToken, makeBanner, makeProp, makeVillage, tokenFaceCanvas, TOKEN_TYPES, AGES } from './campaign.js';
+import { makeCampaignMap, makeToken, makeBanner, makeProp, makeVillage, tokenFaceCanvas, TOKEN_TYPES, AGES, PLAYER_COLOURS } from './campaign.js';
 
 fitStage(document.getElementById('stage'));
 const q = new URLSearchParams(location.search);
@@ -159,6 +161,70 @@ if (scene === 'tokenart') {
   const ctx = wt.renderer.getContext(), px = new Uint8Array(4), H = ctx.drawingBufferHeight, W = ctx.drawingBufferWidth;
   const read = (x, y) => { ctx.readPixels(x, H - 1 - y, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, px); return Array.from(px).join(','); };
   console.log('alpha corner=' + read(20, 20) + ' edge=' + read(W - 30, H / 2) + ' centre=' + read(W / 2, H * 0.55) + ' nearFlame=' + read(Math.round(W * 0.36), Math.round(H * 0.3)));
+  window.wt = wt;
+} else if (scene === 'props') {
+  // close-up of the four resource props + two banners (blue and green cloth) under the candle
+  label.textContent = 'Props';
+  const wt = createWarTable(gl, { board: false, candlePos: [-1.75, 0, 0.55], candle: { lightIntensity: 30, height: 1.2 }, dust: false });
+  ['food', 'wood', 'gold', 'stone'].forEach((p, i) => { const pr = makeProp(p, { seed: i + 1 }); pr.scale.setScalar(1.5); pr.position.set(-1.0 + i * 0.68, 0, 0.1); pr.rotation.y = [0.4, 0.7, 0, 0.3][i]; wt.scene.add(pr); });
+  const bR = makeBanner('red', { height: 0.95, seed: 5 }); bR.position.set(-0.85, 0, -0.75); wt.scene.add(bR);
+  const bB = makeBanner('blue', { height: 0.95, seed: 9 }); bB.position.set(0.25, 0, -0.8); wt.scene.add(bB);
+  const bG = makeBanner('green', { height: 0.95, seed: 4 }); bG.position.set(1.15, 0, -0.7); wt.scene.add(bG);
+  wt.onTick((dt, t) => { bB.userData.update(t); bG.userData.update(t + 2); bR.userData.update(t + 4); });
+  wt.camera.fov = 30; wt.camera.updateProjectionMatrix();
+  wt.camera.position.set(0.1, 1.45, 3.5); wt.camera.lookAt(-0.05, 0.35, -0.15);
+  wt.candle.userData.aimDrips(wt.camera.position);
+  finish(wt);
+} else if (scene === 'apicheck') {
+  // T2 API self-check: logs "APICHECK PASS <name>" / "APICHECK FAIL <name> <detail>" and a final "APICHECK DONE fails=<n>"
+  label.textContent = 'API check';
+  let fails = 0;
+  const check = (name, ok, detail = '') => { if (!ok) fails++; console.log('APICHECK ' + (ok ? 'PASS ' : 'FAIL ') + name + (ok ? '' : ' ' + detail)); };
+  const near = (a, b) => Math.abs(a - b) < 1e-6;
+  const run = (name, fn) => { try { fn(); } catch (e) { check(name, false, 'threw ' + e.message); } };
+  const wt = createWarTable(gl, { board: false, candle: { height: 1.6 }, dust: false, autoStart: false });
+  run('candle light at wax top + default lightOffset 0.34', () => {
+    const L = wt.candle.userData.light;
+    check('candle light at wax top + default lightOffset 0.34', near(L.position.y, 0.12 + 1.6 + 0.34), 'y=' + L.position.y);
+    wt.candle.userData.setHeight(1.0);
+    check('candle light kept after setHeight', near(L.position.y, 0.12 + 1.0 + 0.34), 'y=' + L.position.y);
+    wt.candle.userData.aimDrips(new THREE.Vector3(3, 1, 3));
+    check('candle light kept after aimDrips', near(L.position.y, 0.12 + 1.0 + 0.34), 'y=' + L.position.y);
+    wt.advance(0.3);
+    check('candle light kept after update()', near(L.position.y, 0.12 + 1.0 + 0.34), 'y=' + L.position.y);
+  });
+  run('custom lightOffset', () => {
+    const wt2 = createWarTable(document.createElement('div'), { board: false, table: false, candle: { height: 1.2, lightOffset: 0.5 }, dust: false, autoStart: false });
+    check('custom lightOffset', near(wt2.candle.userData.light.position.y, 0.12 + 1.2 + 0.5), 'y=' + wt2.candle.userData.light.position.y);
+    check('lightOffset readable', wt2.candle.userData.lightOffset === 0.5, String(wt2.candle.userData.lightOffset));
+    wt2.renderer.dispose();
+  });
+  run('DOF before bloom by default', () => {
+    wt.enableDOF();
+    const ps = wt.composer.passes, bi = ps.indexOf(wt.bloomPass), ki = ps.indexOf(wt.bokehPass);
+    check('DOF before bloom by default', ki >= 0 && bi >= 0 && ki < bi, 'bokeh=' + ki + ' bloom=' + bi);
+  });
+  run('fog API', () => {
+    const map = makeCampaignMap({ width: 11, depth: 7.4, seed: 3 });
+    const U = map.userData, us = U.fogMeshes.map((m) => m.material.userData.uniforms.uOpacity);
+    const base = us.map((u) => u.value);
+    check('setFogOpacity exists', typeof U.setFogOpacity === 'function');
+    U.setFogOpacity(0.5);
+    check('setFogOpacity(0.5) halves every layer', us.every((u, i) => near(u.value, base[i] * 0.5)), us.map((u) => u.value).join(','));
+    U.setFogOpacity(2);
+    check('setFogOpacity clamps to 1', us.every((u, i) => near(u.value, base[i])), us.map((u) => u.value).join(','));
+    U.setFogOpacity(0);
+    check('setFogOpacity(0) clears', us.every((u) => u.value === 0));
+    check('fog colours are warm (r > g > b)', U.fogMeshes.every((m) => { const c = m.material.color; return c.r > c.g && c.g > c.b; }), U.fogMeshes.map((m) => m.material.color.getHexString()).join(','));
+  });
+  run('cloth presets', () => {
+    check('PLAYER_COLOURS.cloth.blue', PLAYER_COLOURS.cloth?.blue === 0x14307f, String(PLAYER_COLOURS.cloth?.blue));
+    check('PLAYER_COLOURS.cloth.green', PLAYER_COLOURS.cloth?.green === 0x245a3a, String(PLAYER_COLOURS.cloth?.green));
+    check('cloth not listed as a colour name', !Object.keys(PLAYER_COLOURS).includes('cloth'));
+    check('makeBanner(blue) uses cloth blue', makeBanner('blue').userData.clothColour === 0x14307f, String(makeBanner('blue').userData.clothColour));
+    check('makeBanner(red) falls back to red', makeBanner('red').userData.clothColour === PLAYER_COLOURS.red, String(makeBanner('red').userData.clothColour));
+  });
+  console.log('APICHECK DONE fails=' + fails);
   window.wt = wt;
 } else {
   const wt = createWarTable(gl, { candlePos: [-5.6, 0, 4.0] });

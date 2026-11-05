@@ -17,9 +17,20 @@ export const PLAYER_COLOURS = {
   red: 0x8c2c22, blue: 0x2d4b7a, green: 0x3e5f35, yellow: 0xb8892c,
   teal: 0x2d6a68, purple: 0x5b3b6f, grey: 0x6d6862, orange: 0xa65a24,
 };
+/**
+ * PLAYER_COLOURS.cloth: deeper dye presets for banner silk (round 2). Under the warm sheen the muted pigment blue
+ * and green read blue-grey; names missing here fall back to the pigment colour. Non-enumerable, so
+ * Object.keys(PLAYER_COLOURS) still lists only colour names.
+ */
+Object.defineProperty(PLAYER_COLOURS, 'cloth', { enumerable: false, value: Object.freeze({ blue: 0x14307f, green: 0x245a3a }) });
 function pcol(c) {
-  if (typeof c === 'string' && PLAYER_COLOURS[c] != null) return new THREE.Color(PLAYER_COLOURS[c]);
+  if (typeof c === 'string' && typeof PLAYER_COLOURS[c] === 'number') return new THREE.Color(PLAYER_COLOURS[c]);
   return new THREE.Color(c ?? PLAYER_COLOURS.red);
+}
+/** banner cloth colour: the cloth preset for a colour name, else the same as pcol */
+function clothCol(c) {
+  if (typeof c === 'string' && PLAYER_COLOURS.cloth[c] != null) return new THREE.Color(PLAYER_COLOURS.cloth[c]);
+  return pcol(c);
 }
 const css = (col, k = 0) => { // k<0 darker, k>0 lighter
   const c = col.clone(); if (k < 0) c.lerp(new THREE.Color(0x120a05), -k); else if (k > 0) c.lerp(new THREE.Color(0xf4e6c8), k);
@@ -212,13 +223,14 @@ function paintParchment(W, D, seed, F) {
   const c = makeCanvas(TW, TH), g = c.getContext('2d');
   const rnd = mulberry32(seed * 977 + 3), N = makeNoise2D(seed + 500);
   // ---- paper: base tone + mottling from a low-res noise field
-  g.fillStyle = '#cbb488'; g.fillRect(0, 0, TW, TH);
+  // round 2: base + mottling one step deeper and warmer; the old cream went white (snow) once tone-mapped
+  g.fillStyle = '#c2a274'; g.fillRect(0, 0, TW, TH);
   const mw = 256, mh = Math.round(256 * D / W), mc = makeCanvas(mw, mh), mg = mc.getContext('2d'), md = mg.createImageData(mw, mh);
   for (let y = 0; y < mh; y++) for (let x = 0; x < mw; x++) {
     const n = N.fbm(x / 40, y / 40, 5), n2 = N.fbm(x / 9 + 30, y / 9, 3);
     const t = clamp01(0.5 + n * 0.9 + n2 * 0.25);
     const i = (y * mw + x) * 4;
-    md.data[i] = lerp(178, 236, t); md.data[i + 1] = lerp(146, 214, t); md.data[i + 2] = lerp(100, 168, t); md.data[i + 3] = 255;
+    md.data[i] = lerp(168, 226, t); md.data[i + 1] = lerp(130, 190, t); md.data[i + 2] = lerp(82, 132, t); md.data[i + 3] = 255;
   }
   mg.putImageData(md, 0, 0);
   g.globalAlpha = 0.55; g.imageSmoothingQuality = 'high'; g.drawImage(mc, 0, 0, TW, TH); g.globalAlpha = 1;
@@ -436,12 +448,15 @@ function fogMaterial(maskTex, W, D, L) {
         float fog = 1.0 - smoothstep(uLo, uHi, fedge);
         float fden = mix(uMinD, 1.0, smoothstep(0.25, 0.72, fnz)) * mix(0.8, 1.0, fst);
         vec2 fb = min(vFogUv, 1.0 - vFogUv) * uSize;
-        float fbord = smoothstep(0.0, 0.25, min(fb.x, fb.y));
+        // the mist layers float above the paper; over the curled north lip (vFogUv.y > 0.9) they stuck out past the
+        // paper edge as pale wedges / a jagged smear against the dark table. Fade every layer out before the curl and
+        // keep a wide soft border on the other edges (round-2 fix, first done locally in starting.js).
+        float fbord = smoothstep(0.08, 0.75, min(fb.x, fb.y)) * (1.0 - smoothstep(0.83, 0.895, vFogUv.y));
         diffuseColor.a *= fog * fden * uOpacity * fbord;
         float frim = clamp(fog * (1.0 - fog) * 4.0, 0.0, 1.0);
         diffuseColor.rgb *= (0.88 + 0.24 * fst) * (1.0 - uPool * frim);`);
   };
-  m.customProgramCacheKey = () => 'fog-mist';
+  m.customProgramCacheKey = () => 'fog-mist-r2';
   m.userData.uniforms = U;
   return m;
 }
@@ -457,6 +472,7 @@ function fogMaterial(maskTex, W, D, L) {
  *   reveal(x,z,r,{duration=2.4, delay=0})       lift the fog in a soft circle (animated)
  *   revealPath([[x,z],...], r, {speed=0.8 units/s, delay=0, duration=2.2})   fog lifts along a path (scouting)
  *   resetFog() / clearFog() / setFogVisible(bool)
+ *   setFogOpacity(k)  fade all mist layers together, k 0..1 (1 = default density); use instead of poking uOpacity
  *   setAge(age, {duration=2.4})   'dark'|'feudal'|'castle'|'imperial' (village on the map)
  *   village           the makeVillage group (if village !== false)
  */
@@ -501,13 +517,16 @@ export function makeCampaignMap(o = {}) {
       bd.data[i] = bd.data[i + 1] = bd.data[i + 2] = b * 255; bd.data[i + 3] = 255;
     }
     rg.putImageData(rd, 0, 0); bg.putImageData(bd, 0, 0); }
+  // round 2 (BRB review: parchment read as snow/ice under the single warm candle): warm specular instead of white,
+  // weaker specular, and the neutral room environment (grey-blue reflections) mostly kept off the paper.
   const paperMat = new THREE.MeshPhysicalMaterial({
     map: colTex, roughnessMap: canvasTex(rc, false), roughness: 1, bumpMap: canvasTex(bc, false), bumpScale: 0.9,
-    sheen: 0.35, sheenColor: new THREE.Color(0xf0dcb0), sheenRoughness: 0.7, specularIntensity: 0.4,
+    sheen: 0.3, sheenColor: new THREE.Color(0xe2b97a), sheenRoughness: 0.7,
+    specularIntensity: 0.22, specularColor: new THREE.Color(0xffd9a0), envMapIntensity: 0.3,
   });
   for (const t of [paperMat.roughnessMap, paperMat.bumpMap]) t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
   const top = new THREE.Mesh(paperGeo(220, 148), paperMat); top.castShadow = true; top.receiveShadow = true; group.add(top);
-  const under = new THREE.Mesh(top.geometry, new THREE.MeshStandardMaterial({ color: 0xbca57c, roughness: 0.95, side: THREE.BackSide })); under.receiveShadow = true; group.add(under);
+  const under = new THREE.Mesh(top.geometry, new THREE.MeshStandardMaterial({ color: 0xb0935f, roughness: 0.95, side: THREE.BackSide, envMapIntensity: 0.3 })); under.receiveShadow = true; group.add(under);
   // paper thickness: a thin wall around the boundary
   { const sx = 220, sz = 148, p = top.geometry.attributes.position, idx = [];
     for (let i = 0; i <= sx; i++) idx.push(i); for (let j = 1; j <= sz; j++) idx.push(j * (sx + 1) + sx);
@@ -526,10 +545,11 @@ export function makeCampaignMap(o = {}) {
   const maskC = makeCanvas(MW, MH), mg = maskC.getContext('2d');
   mg.fillStyle = '#000'; mg.fillRect(0, 0, MW, MH);
   const maskTex = new THREE.CanvasTexture(maskC); maskTex.colorSpace = THREE.NoColorSpace; maskTex.wrapS = maskTex.wrapT = THREE.ClampToEdgeWrapping;
+  // round 2: warm smoky umber (the cool greys read as snow under the single warm candle)
   const layers = [
-    { h: 0.022, color: 0x9ea3a2, opacity: 0.9, rag: 0.7, lo: 0.3, hi: 0.64, minD: 0.5, pool: 0.45, scale: 0.75, drift: 0.018, seed: 1.3 },
-    { h: 0.075, color: 0xc4c4bd, opacity: 0.5, rag: 0.9, lo: 0.18, hi: 0.70, minD: 0.0, pool: 0.0, scale: 1.25, drift: 0.045, seed: 7.9 },
-    { h: 0.15, color: 0xd2d0c8, opacity: 0.28, rag: 0.95, lo: 0.12, hi: 0.78, minD: 0.0, pool: 0.0, scale: 1.8, drift: 0.075, seed: 3.1 },
+    { h: 0.022, color: 0x5e4c39, opacity: 0.9, rag: 0.7, lo: 0.3, hi: 0.64, minD: 0.5, pool: 0.45, scale: 0.75, drift: 0.018, seed: 1.3 },
+    { h: 0.075, color: 0x7a6650, opacity: 0.5, rag: 0.9, lo: 0.18, hi: 0.70, minD: 0.0, pool: 0.0, scale: 1.25, drift: 0.045, seed: 7.9 },
+    { h: 0.15, color: 0x8a7761, opacity: 0.28, rag: 0.95, lo: 0.12, hi: 0.78, minD: 0.0, pool: 0.0, scale: 1.8, drift: 0.075, seed: 3.1 },
   ];
   const fogMeshes = [];
   if (o.fog !== false) {
@@ -592,6 +612,8 @@ export function makeCampaignMap(o = {}) {
     resetFog() { ops.length = 0; maskDirty = true; },
     clearFog() { U.resetFog(); ops.push({ x: 0, z: 0, r: Math.hypot(W, D) * 2, t0: -1, dur: 0 }); maskDirty = true; },
     setFogVisible(v) { for (const m of fogMeshes) m.visible = v; },
+    /** setFogOpacity(k): scale every mist layer's opacity by k (0..1, clamped) relative to its default. */
+    setFogOpacity(k) { const f = clamp01(+k || 0); fogMeshes.forEach((m, i) => { m.material.userData.uniforms.uOpacity.value = layers[i].opacity * f; }); },
     setAge(age, op) { if (village) village.userData.setAge(age, op); },
   });
   U.update(0);
@@ -826,9 +848,10 @@ function emblemCanvas(pc, seed) {
  * makeBanner(colour='red', {height=0.9, width=0.3, seed=1}) -> THREE.Group, origin at the foot (stands on table or map).
  * Walnut pole with brass finial and cross-bar, swallow-tailed cloth (sheen fabric, woven texture, gold border,
  * original chevron-and-star device). userData.update(t) makes the cloth ripple; userData.cloth is the mesh.
+ * A colour name uses PLAYER_COLOURS.cloth[name] when there is one (deeper dye); userData.clothColour is the hex used.
  */
 export function makeBanner(colour = 'red', o = {}) {
-  const m = mats(), pc = pcol(colour);
+  const m = mats(), pc = clothCol(colour);
   const H = o.height ?? 0.9, Wc = o.width ?? H * 0.33, Hc = o.clothHeight ?? H * 0.5, seed = o.seed ?? 1;
   const g = new THREE.Group(); g.userData.kind = 'banner';
   const pr = Math.max(0.006, H * 0.012);
@@ -851,6 +874,7 @@ export function makeBanner(colour = 'red', o = {}) {
   shadowAll(g);
   const ph = seed * 1.7;
   g.userData.cloth = cloth;
+  g.userData.clothColour = pc.getHex();
   g.userData.update = (t) => {
     for (let i = 0; i < p.count; i++) {
       const x = base[i * 3], y = base[i * 3 + 1], f = -y / Hc;
@@ -876,7 +900,8 @@ function burlapCanvas(seed) {
   }
   g.putImageData(d, 0, 0); return c;
 }
-function ringsCanvas(seed, light = [190, 146, 96], dark = [128, 86, 50]) {
+// round 2: end grain less saturated (it glowed orange under the candle): pale weathered heartwood, greyer rings
+function ringsCanvas(seed, light = [168, 146, 118], dark = [108, 88, 66]) {
   const S = 256, c = makeCanvas(S), g = c.getContext('2d'), d = g.createImageData(S, S), N = makeNoise2D(seed);
   for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
     const dx = x / S - 0.5 + 0.03, dy = y / S - 0.5, r = Math.hypot(dx, dy) * 2;
@@ -918,10 +943,10 @@ function propMats() {
     rope: new THREE.MeshStandardMaterial({ color: 0x6b5233, roughness: 0.95 }),
     grain: new THREE.MeshStandardMaterial({ color: 0xc9a25a, roughness: 0.85, bumpMap: canvasTex(noiseCanvas(128, 128, 41, { sx: 40, sy: 40, oct: 2 }), false, [2, 2]), bumpScale: 3 }),
     bark: new THREE.MeshPhysicalMaterial({ map: canvasTex(barkCol, true, [2, 1]), bumpMap: canvasTex(bark, false, [2, 1]), bumpScale: 3.5, roughness: 0.95 }),
-    ends: [0, 1, 2].map((i) => new THREE.MeshPhysicalMaterial({ map: canvasTex(ringsCanvas(50 + i), true), roughness: 0.8, bumpMap: canvasTex(ringsCanvas(50 + i), false), bumpScale: 1.0 })),
+    ends: [0, 1, 2].map((i) => new THREE.MeshPhysicalMaterial({ map: canvasTex(ringsCanvas(50 + i), true), roughness: 0.9, bumpMap: canvasTex(ringsCanvas(50 + i), false), bumpScale: 1.0 })),
     gold: new THREE.MeshPhysicalMaterial({ color: 0xd4a548, metalness: 1, roughness: 0.3, bumpMap: canvasTex(coin, false), bumpScale: 1.6, clearcoat: 0.2, clearcoatRoughness: 0.3 }),
     goldEdge: new THREE.MeshPhysicalMaterial({ color: 0xc9983f, metalness: 1, roughness: 0.38, bumpMap: canvasTex(linesCanvas(64, 64, 3, { n: 120, len: [64, 64], alpha: 0.9 }), false, [8, 1]), bumpScale: 1 }),
-    stone: new THREE.MeshPhysicalMaterial({ color: 0xa49e92, map: canvasTex(granite, true, [1, 1]), roughness: 0.88, bumpMap: canvasTex(granite, false, [1, 1]), bumpScale: 2.2 }),
+    stone: new THREE.MeshPhysicalMaterial({ color: 0x9e978a, map: canvasTex(granite, true, [1, 1]), roughness: 0.9, bumpMap: canvasTex(granite, false, [1, 1]), bumpScale: 2.2, vertexColors: true }),
   };
   return _pm;
 }
@@ -987,10 +1012,26 @@ export function makeProp(type, o = {}) {
     g.add(im);
   } else if (type === 'stone') {
     const blocks = [[-0.12, 0, 0, 0.25, 0.12, 0.15, 0.1, 0], [0.13, 0, 0.02, 0.22, 0.11, 0.15, -0.15, 0], [0.0, 0.12, 0.0, 0.24, 0.11, 0.14, 1.4, 0], [0.05, 0, 0.2, 0.14, 0.09, 0.1, 0.6, 0.0]];
+    // round 2: the soft rounded blocks read as cubes. Now: a broad chiselled chamfer on every edge, faces knocked
+    // into a few flat tool facets, and the chamfers painted darker (vertex colour) so the joints between blocks read.
     for (const [x, y, z, w, h, d, ry] of blocks) {
-      const geo = new RoundedBoxGeometry(w, h, d, 3, 0.012); const p = geo.attributes.position, N = makeNoise2D(Math.floor(rnd() * 1000));
-      for (let i = 0; i < p.count; i++) { const vx = p.getX(i), vy = p.getY(i), vz = p.getZ(i); const k = 0.006 * N(vx * 30, vy * 30 + vz * 30); p.setXYZ(i, vx + Math.sign(vx) * k, vy + Math.sign(vy) * k, vz + Math.sign(vz) * k); }
-      geo.computeVertexNormals();
+      const ch = Math.min(w, h, d) * 0.17;
+      let geo = new RoundedBoxGeometry(w, h, d, 1, ch); // segments=1: one flat bevel strip = a chamfer
+      const p = geo.attributes.position, N = makeNoise2D(Math.floor(rnd() * 1000)), amp = Math.min(w, h, d) * 0.075;
+      for (let i = 0; i < p.count; i++) {
+        const vx = p.getX(i), vy = p.getY(i), vz = p.getZ(i);
+        const k = amp * N(vx * 23 + 3.1, vy * 23 - vz * 19), s = amp * 0.5 * N(vz * 17 - 5, vx * 21 + vy * 13);
+        p.setXYZ(i, vx + Math.sign(vx) * k + s, vy + Math.sign(vy) * k * 0.6, vz + Math.sign(vz) * k - s);
+      }
+      geo = BGU.toCreasedNormals(geo, 0.35); // flat facets, crisp edges
+      const q = geo.attributes.position, col = new Float32Array(q.count * 3), A = new THREE.Vector3(), Bv = new THREE.Vector3(), C = new THREE.Vector3();
+      for (let t = 0; t < q.count; t += 3) {
+        A.fromBufferAttribute(q, t); Bv.fromBufferAttribute(q, t + 1); C.fromBufferAttribute(q, t + 2);
+        const n = Bv.sub(A).cross(C.sub(A)).normalize(), ax = Math.max(Math.abs(n.x), Math.abs(n.y), Math.abs(n.z));
+        const v = ax < 0.9 ? 0.42 + 0.12 * rnd() : 0.8 + 0.2 * rnd(); // chamfer / joint darker; facets vary a little
+        for (let k = 0; k < 3; k++) col.set([v, v * 0.985, v * 0.96], (t + k) * 3);
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
       const b = new THREE.Mesh(geo, pm.stone); b.position.set(x, y + h / 2, z); b.rotation.y = ry; g.add(b);
     }
   } else throw new Error('makeProp: unknown type ' + type);

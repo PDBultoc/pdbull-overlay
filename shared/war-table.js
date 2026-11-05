@@ -889,14 +889,19 @@ function glowTexture() {
 }
 
 /**
- * makeCandle({height=1.6, radius=0.2, lightIntensity=22, shadowMapSize=1024, shadowRadius=6, castShadow=true, drips=0})
+ * makeCandle({height=1.6, radius=0.2, lightIntensity=22, shadowMapSize=1024, shadowRadius=6, castShadow=true, drips=0,
+ *             lightOffset=0.34})
  *   (round 2: drips=true by default, dripAngle=PI/2 (+z), lightIntensity default is 42)
  * -> Group with userData {light, flame, flameWorldPos(), update(t), setLit(bool), setHeight(h), aimDrips(worldVec3),
- *    waxGlow:{value}, waxMaterial}. setHeight keeps the translucent top glow at the new top.
+ *    waxGlow:{value}, waxMaterial, lightOffset}. setHeight keeps the translucent top glow at the new top and the
+ *    point light at wax top + lightOffset (wax top = 0.12 + height in the candle's frame).
  * Brass holder + wax body + wick + shader flame + warm PointLight (castShadow, soft PCF).
  */
 export function makeCandle(o = {}) {
   const H = o.height ?? 1.6, R = o.radius ?? 0.2;
+  // the point light sits lightOffset above the wax top (round 2: 0.12 blew the lip under it out into a bright slab
+  // from high cameras; pages lifted it by hand). Kept at the same offset by setHeight/aimDrips.
+  const lightOffset = o.lightOffset ?? 0.34;
   const g = new THREE.Group();
   const m = getMaterials();
   // brass holder: dish + finger ring
@@ -985,7 +990,7 @@ export function makeCandle(o = {}) {
     wick.position.y = 0.12 + h - 0.02; wick.rotation.z = 0.12; waxGroup.add(wick);
     flame.position.y = 0.12 + h + 0.03;
     glow.position.y = flame.position.y + 0.09;
-    light.position.set(0, 0.12 + h + 0.12, 0);
+    light.position.set(0, 0.12 + h + lightOffset, 0);
     waxGroup.userData.h = h;
   }
   // flame
@@ -1012,7 +1017,7 @@ export function makeCandle(o = {}) {
   let lit = true;
   g.userData = {
     kind: 'candle', light, flame, glow, waxGlow: waxGlowU, waxMaterial: waxMat,
-    baseIntensity: base,
+    baseIntensity: base, lightOffset,
     /** aimDrips(worldPoint): turn the drip side of the wax towards a point (usually the camera position). */
     aimDrips(p) { const l = g.worldToLocal(p.clone()); dripAngle = Math.atan2(l.z, l.x); buildWax(waxGroup.userData.h); },
     flameWorldPos: () => flame.getWorldPosition(new THREE.Vector3()),
@@ -1193,14 +1198,18 @@ export function createWarTable(container, opts = {}) {
   wt.composer = composer; wt.bloomPass = bloomPass; wt.vignettePass = vignettePass;
 
   /**
-   * wt.enableDOF({focus=12, aperture=0.0006, maxblur=0.008}) -> {setFocus(distOrVector3), set(params), disable()}
-   * Inserts a BokehPass (depth of field) before the vignette. setFocus(Vector3) focuses on a world point.
+   * wt.enableDOF({focus=12, aperture=0.0006, maxblur=0.008, afterBloom=false}) -> {pass, setFocus(distOrVector3), set(params), disable(), enable()}
+   * Inserts a BokehPass (depth of field) BEFORE the bloom (round 2): blurring the bloomed frame smeared the flame
+   * halo into a box over the background depth; this way the halo is added after the blur and stays round.
+   * afterBloom=true restores the round-1 order (bloom, then DOF). setFocus(Vector3) focuses on a world point.
+   * The pass is also wt.bokehPass.
    */
   wt.enableDOF = (p = {}) => {
     if (!bokehPass) {
       bokehPass = new BokehPass(scene, camera, { focus: p.focus ?? 12, aperture: p.aperture ?? 0.0006, maxblur: p.maxblur ?? 0.008 });
-      const idx = composer.passes.indexOf(bloomPass ?? vignettePass ?? outputPass);
-      composer.insertPass(bokehPass, bloomPass ? idx + 1 : idx);
+      const anchor = bloomPass ? (p.afterBloom ? composer.passes[composer.passes.indexOf(bloomPass) + 1] : bloomPass) : (vignettePass ?? outputPass);
+      composer.insertPass(bokehPass, composer.passes.indexOf(anchor));
+      wt.bokehPass = bokehPass;
     }
     const u = bokehPass.uniforms;
     const api = {
