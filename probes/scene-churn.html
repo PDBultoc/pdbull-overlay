@@ -1,0 +1,46 @@
+<!doctype html><meta charset="utf-8"><title>Probe scene churn (T3)</title>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+<style>body{margin:0;background:#222;color:#fff;font:16px monospace}#host{width:480px;height:270px}</style>
+<div id="host"></div><pre id="out">running</pre>
+<script type="module">
+import { createScene } from '../core/scene.js';
+import { THREE } from '../shared/war-table.js';
+
+const N = 20, host = document.getElementById('host');
+let errors = 0;
+addEventListener('error', () => errors++);
+addEventListener('unhandledrejection', () => errors++);
+const log = (s) => console.log('CHURN ' + s);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// small alert-like content: a few meshes with their own geometry, material and canvas texture
+function build(wt) {
+  for (let i = 0; i < 4; i++) {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    c.getContext('2d').fillStyle = '#c93'; c.getContext('2d').fillRect(0, 0, 64, 64);
+    const tex = new THREE.CanvasTexture(c);
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ map: tex }));
+    m.position.set(i - 1.5, 0.5, 0); wt.scene.add(m);
+  }
+}
+const mem = (r) => r.info.memory.geometries + 'g/' + r.info.memory.textures + 't';
+
+const rows = [];
+for (let i = 1; i <= N; i++) {
+  try {
+    const sc = createScene({ canvasHost: host, build, tableOpts: { transparent: true, shadows: true, bloom: true, pixelRatio: 1 } });
+    sc.start();
+    await sleep(120);
+    const r = sc.wt.renderer;
+    const peak = mem(r);
+    sc.dispose();
+    const after = mem(r);
+    rows.push({ i, peak, after, canvases: host.querySelectorAll('canvas').length });
+    log(`iter ${i} peak=${peak} after_dispose=${after} canvases=${host.querySelectorAll('canvas').length}`);
+  } catch (e) { errors++; log('ERROR iter ' + i + ' ' + e); }
+}
+log(`START ${rows[0]?.peak} (iter 1 peak) END ${rows.at(-1)?.peak} (iter ${N} peak) after_dispose_end=${rows.at(-1)?.after} errors=${errors}`);
+document.getElementById('out').textContent = 'done errors=' + errors;
+</script>

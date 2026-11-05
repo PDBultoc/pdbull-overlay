@@ -1231,7 +1231,6 @@ export function createWarTable(container, opts = {}) {
     if (wt.dust) wt.dust.material.uniforms.uPix.value = h * o.pixelRatio;
   }
   resize();
-  new ResizeObserver(resize).observe(container);
   wt.resize = resize;
 
   const ticks = [];
@@ -1257,10 +1256,15 @@ export function createWarTable(container, opts = {}) {
   wt.advance = (sec) => { while (sec > 1e-6) { const d = Math.min(0.1, sec); step(d); sec -= d; } composer.render(0); };
   wt.start = () => { wanted = true; if (running || document.hidden) return; running = true; clock.start(); raf = requestAnimationFrame(frame); };
   wt.stop = () => { wanted = false; running = false; clock.stop(); cancelAnimationFrame(raf); };
-  document.addEventListener('visibilitychange', () => {
+  const onVis = () => {
     if (document.hidden) { running = false; clock.stop(); cancelAnimationFrame(raf); }
     else if (wanted) { wt.start(); }
-  });
+  };
+  document.addEventListener('visibilitychange', onVis);
+  const resizeObs = new ResizeObserver(resize); resizeObs.observe(container);
+  // T3 hooks (core/scene.js): wt.step(dt) advances state without rendering; wt.dispose() detaches loop, listener, observer.
+  wt.step = step;
+  wt.dispose = () => { wt.stop(); document.removeEventListener('visibilitychange', onVis); resizeObs.disconnect(); ticks.length = 0; };
   wt.time = 0;
   wt.transform = (from, to, topts) => transformObjects(wt, from, to, topts);
   if (o.autoStart) wt.start();

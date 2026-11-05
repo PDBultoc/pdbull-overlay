@@ -24,3 +24,12 @@ grep -E "CONSOLE|Uncaught|rror" "$SHOTS/<page>-v<N>.log" | grep -v chrome-extens
   If not 0, stop ONLY those PIDs (same filter, Stop-Process -Force). Never kill other msedge.exe.
 - Look at the PNG with the Read tool (it shows images). SwiftShader is slower and has
   no real GPU: judge composition, light and materials, not frame rate.
+
+## Capture stability notes (found by earlier tasks)
+- readPixels after advance: after `wt.advance(sec)` do a 1-px `gl.readPixels` (for example
+  `const gl = wt.renderer.getContext(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));`)
+  before the screenshot is taken. It forces the GPU work to finish, so the headless shot shows the finished frame.
+- Pages holding an open ntfy/Twitch stream: use `--timeout=5000`, or `--virtual-time-budget=8000` if chat must render.
+  An open stream never goes idle, so the default wait would hang.
+- Memory/lifecycle probe: `probes/scene-churn.html` (20x create/dispose through `core/scene.js`), run as above with
+  `--enable-logging=stderr`, then `grep CHURN` in the log.
