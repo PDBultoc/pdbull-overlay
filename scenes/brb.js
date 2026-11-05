@@ -15,6 +15,9 @@ import { connect } from '../core/twitchchat.js';
 import { addLine, trimName } from '../core/brbchat.js';
 
 const Q = new URLSearchParams(location.search);
+// quality knob for weak machines, set once in the OBS source URL: ?q=low (smoke ~1/3, wisps ~1/2, no DOF); default = full look
+const LOW = Q.get('q') === 'low';
+console.log('brb quality=' + (LOW ? 'low' : 'full'));
 const SHOT = Q.get('shot') === '1';
 if (SHOT) document.body.classList.add('shot');
 fitStage(document.getElementById('stage'));
@@ -152,7 +155,7 @@ function makeSmokeWriter(wt, srcWorld, text, { count = 34000, width = 3.6, cente
     vertexShader: SMOKE_VS, fragmentShader: SMOKE_FS, transparent: true, depthWrite: false, depthTest: false,
   });
   const smoke = new THREE.Points(geo, mat); smoke.frustumCulled = false; group.add(smoke);
-  const wn = 3200; const wg = new THREE.BufferGeometry(); const ws = new Float32Array(wn);
+  const wn = LOW ? 1600 : 3200; const wg = new THREE.BufferGeometry(); const ws = new Float32Array(wn);
   for (let i = 0; i < wn; i++) ws[i] = r();
   wg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(wn * 3), 3));
   wg.setAttribute('aSeed', new THREE.BufferAttribute(ws, 1));
@@ -229,7 +232,12 @@ function build(wt) {
     // a second, higher warm fill over the far table (the same off-frame candles) so walnut continues behind the map
     const far2 = new THREE.PointLight(0xff9448, 60, 0, 2); far2.position.set(-3, 1.2, -9); wt.scene.add(far2);
     // the room fog (tuned for a close board) swallowed everything past ~15 units into black: thin it
-    if (wt.scene.fog) wt.scene.fog.density = 0.008; }
+    if (wt.scene.fog) wt.scene.fog.density = 0.008;
+    // fix round 1: the far (right) half of the map still read dim. A low warm fill over it (candle mood kept: it is
+    // a pool, not even room light) plus a faint warm falloff on the wall and sky so the table edge is not a hard black void.
+    const far3 = new THREE.PointLight(0xffa05a, 28, 0, 2); far3.position.set(4.6, 3.4, 0.6); wt.scene.add(far3);
+    const wallGlow = new THREE.PointLight(0xff8a40, 280, 0, 2); wallGlow.position.set(0, 7, -41); wt.scene.add(wallGlow);
+    wt.scene.background = new THREE.Color(0x140c07); if (wt.scene.fog) wt.scene.fog.color.set(0x140c07); }
   wt.candle.userData.waxGlow.value = 0.35;
   const bounce = new THREE.PointLight(0xffb36a, 1.1, 2.0, 2); bounce.position.set(-2.55, 0.25, 7.2); wt.scene.add(bounce);
 
@@ -309,13 +317,13 @@ function build(wt) {
   { const vk = new THREE.SpotLight(0xffb070, 9, 0, 0.42, 0.9, 2); vk.position.set(vx + 1.6, 3.4, vz + 2.6);
     vk.target.position.set(vx, 0.2, vz); wt.scene.add(vk, vk.target); }
   // lighter blur than the prototype: the age change of the village (t=40..43) must read through it
-  const dof = Q.get('dof') === '0' ? { setFocus() {} } : wt.enableDOF({ aperture: 0.0011, maxblur: 0.0038 });
+  const dof = (Q.get('dof') === '0' || LOW) ? { setFocus() {} } : wt.enableDOF({ aperture: 0.0011, maxblur: 0.0038 });
   dof.setFocus(flame.clone().add(cam.clone().sub(flame).setY(0).normalize().multiplyScalar(0.2)).setY(flame.y - 0.35));
   wt.onTick((dt, t) => {
     wt.camera.position.set(cam.x + Math.sin(t * 0.17) * 0.04, cam.y + Math.sin(t * 0.21) * 0.02, cam.z);
     wt.camera.lookAt(look);
   });
-  const smokeOpts = { center: new THREE.Vector3(-1.6, 2.6, 5.9), width: 3.5, count: +(Q.get('sc') || 30000) };
+  const smokeOpts = { center: new THREE.Vector3(-1.6, 2.6, 5.9), width: 3.5, count: +(Q.get('sc') || (LOW ? 10000 : 30000)) };
   lastHandles = { wt, flame, smokeOpts };
   smoke = makeSmokeWriter(wt, flame, smokeText || BRB_FALLBACK, smokeOpts);
   smokeText = smokeText || BRB_FALLBACK;
@@ -324,10 +332,10 @@ function build(wt) {
 /* ------------------------------------------------------------------ boot */
 const settings = createSettings();
 const bus = createBus({ name: 'pdbull' });
-let fromRemote = false;
+// the scene is consume-only: it never publishes settings, so no echo guard (fromRemote) is needed
 const remote = createRemote({
   room: Q.get('room') || '',
-  onSettings: (s) => { fromRemote = true; try { settings.patch(s); } finally { fromRemote = false; } },
+  onSettings: (s) => settings.patch(s),
   onEvent: (type, payload) => bus.emit(type, payload),
 });
 bus.on('settings', (p) => { if (p && typeof p === 'object') settings.patch(p); else render(); });
