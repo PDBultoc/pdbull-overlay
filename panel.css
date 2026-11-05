@@ -1,0 +1,28 @@
+/* Dock panel: walnut + brass tokens from shared/tokens.css (no new design). */
+:root { --bad: #d9674a; --ok: #9bc26a; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--walnut-950); color: var(--text-light); font: 13px/1.35 var(--font-ui); }
+body { padding: 8px; min-width: 280px; }
+h1 { font: 600 15px var(--font-title); margin: 0 0 6px; color: var(--brass-300); letter-spacing: .08em; text-transform: uppercase; }
+.top { position: sticky; top: 0; z-index: 2; background: var(--walnut-950); padding-bottom: 8px; border-bottom: 1px solid var(--brass-600); margin-bottom: 8px; }
+.row { display: flex; align-items: center; gap: 8px; margin: 5px 0; }
+.row > label, .lbl { flex: 0 0 38%; color: var(--text-dim); }
+.row > input[type=text], .row > input[type=number], .row > input[type=password], .row > input[type=url] { flex: 1; min-width: 0; }
+code { color: var(--brass-300); font-size: 12px; overflow-wrap: anywhere; }
+input, button { font: inherit; color: var(--text-light); background: var(--ebony-800); border: 1px solid var(--brass-700); border-radius: 4px; padding: 5px 7px; }
+input:focus, button:focus-visible { outline: 2px solid var(--flame); outline-offset: 1px; }
+button { cursor: pointer; background: var(--walnut-800); }
+button:hover { border-color: var(--brass-400); }
+button.pri { background: var(--brass-400); color: var(--ink-on-brass); font-weight: 600; border-color: var(--brass-300); }
+button.dng { border-color: var(--bad); color: var(--bad); }
+.links, .btns { display: flex; flex-wrap: wrap; gap: 6px; margin: 5px 0; }
+.card { background: var(--walnut-900); border: 1px solid var(--brass-700); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+.card h2 { font: 600 13px var(--font-title); margin: 0 0 4px; color: var(--brass-300); letter-spacing: .06em; text-transform: uppercase; }
+.dots { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; color: var(--text-dim); }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #5a4a38; margin-right: 4px; vertical-align: middle; }
+.dot.ok { background: var(--ok); }
+.dot.bad { background: var(--bad); }
+.note { color: var(--text-dim); font-size: 12px; }
+.chk { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 5px 0; }
+.chk label { display: flex; gap: 5px; align-items: center; }
+.cd { font-variant-numeric: tabular-nums; font-size: 24px; color: var(--brass-300); text-align: center; margin: 4px 0; }
