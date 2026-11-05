@@ -18,9 +18,26 @@ OBS → **Settings → Advanced → Sources** → bifează **Enable Browser Sour
 | Joc | **Copy overlay link** | deasupra capturii de joc, deasupra camerei |
 | Starting Soon | **Copy Starting link** | singura sursă din scenă |
 | BRB | **Copy BRB link** | singura sursă din scenă |
+| Ending Soon | **Copy End link** | singura sursă din scenă |
 
 Pentru fiecare: **+ → Browser** → lipești link-ul în **URL** → Width 1920, Height 1080 → OK.
 La **Starting** și **BRB** bifează **Shutdown source when not visible** (nu consumă placa video cât joci). Dacă la trecerea pe scenă vezi o clipă un cadru gol, debifează și spune-mi.
+
+### 2a. Tranziția (Stinger)
+1. Descarcă `assets/stinger-scroll.webm` din https://github.com/PDBultoc/pdbull-overlay (deschizi fișierul → **Download raw file**) într-un folder local care rămâne acolo.
+2. OBS → **Scene Transitions** → **+** → **Stinger** → **Video File** = fișierul descărcat.
+3. **Transition Point Type** = **Time (milliseconds)**, **Transition Point** = **1000**.
+4. **Audio Monitoring** cum preferi.
+5. Dacă apare un dreptunghi negru, spune-mi.
+
+### 2b. Ending Soon
+Scena veche (imagine + alertbox) nu mai trebuie: șterge imaginea și alertbox-ul. Pune în loc un **Browser Source** cu link-ul de la **Copy End link**, 1920 × 1080. Bifează **Shutdown source when not visible** și **Refresh browser when scene becomes active**.
+
+### 2c. Sunet
+Pe sursele Starting, BRB și End bifează **Control audio via OBS**. Volumul și pornit/oprit se reglează din cardul **Ambience** din dock.
+
+### 2d. Bannerul de meci
+Nu ai nimic de făcut: face parte din overlay. Îl pornești/oprești din cardul **Match banner** din dock.
 
 ## 3. Camera
 În scena de joc, sursa camerei stă **sub** overlay, la **X 8, Y 755**, mărime **322 × 180** (rama de nuc din overlay o încadrează).

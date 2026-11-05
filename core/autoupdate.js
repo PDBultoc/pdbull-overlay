@@ -13,10 +13,13 @@ export function shouldReload(loaded, latest) {
 export const CODE = ['overlay.html', 'panel.html', 'panel.js', 'panel.css',
   'scenes/starting.html', 'scenes/starting.js', 'scenes/starting.css',
   'scenes/brb.html', 'scenes/brb.js', 'scenes/brb.css',
+  'scenes/ending.html', 'scenes/ending.js', 'scenes/ending.css',
   'core/alertlogic.js', 'core/aoe2.js', 'core/autoupdate.js', 'core/brbchat.js', 'core/bus.js', 'core/camchatlogic.js',
   'core/countdown.js', 'core/intrologic.js', 'core/panelcore.js', 'core/ratings.js', 'core/registry.js', 'core/remote.js', 'core/scene.js',
   'core/settings.js', 'core/streamlabs.js', 'core/twitchchat.js',
+  'core/ambience.js', 'core/dustdrift.js', 'core/endinglogic.js', 'core/matchbarlogic.js', 'core/sceneaudio.js',
   'modules/camchat.js', 'modules/camchat.css', 'modules/intro.js', 'modules/intro.css', 'modules/alerts.js', 'modules/alerts.css',
+  'modules/matchbar.js', 'modules/matchbar.css',
   'shared/war-table.js', 'shared/campaign.js', 'shared/tokens.css'];
 
 async function refreshCache(fetchFn) {
