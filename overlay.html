@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <title>PDBull overlay</title>
 <link rel="stylesheet" href="shared/tokens.css">
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
 <style>html,body{margin:0;width:1920px;height:1080px;background:transparent;overflow:hidden}
 #stage{position:absolute;left:0;top:0;width:1920px;height:1080px}
 body.bg #stage{background:#0a0705 url("shared/game.webp") center/1920px 1080px no-repeat}
@@ -93,7 +96,8 @@ const poller = createPoller({
   },
 });
 
-if (q.get('demo') === '1') { // review only: sample chat lines
+const demos = (q.get('demo') || '').split(',').map((s) => s.trim()); // review only, never default
+if (demos.includes('1')) { // review only: sample chat lines
   const msgs = [
     { user: 'NordicFox', text: 'hey! what map are we on today?' },
     { user: 'Extremely_Long_Name_25ch', text: 'knights hit at minute 14, hold the line!' },
@@ -101,6 +105,30 @@ if (q.get('demo') === '1') { // review only: sample chat lines
     { user: 'luna_pawn', text: 'Averyveryveryverylongwordwithoutanyspacesatalltotestwrapping' },
   ];
   setTimeout(() => msgs.forEach((m, i) => setTimeout(() => bus.emit('chat', m), i * 100)), 300);
+}
+
+// review only: ?demo=intro | sub | follow emit one synthetic event each, once the target module has mounted (or after 2 s)
+const DEMO_ME = { profileId: 551021, name: 'PDBull', civ: 'Franks', colorHex: '#405BFF' };
+const DEMO_MATCH = {
+  id: 'test-demo-1v1', running: true, mode: '1v1', map: 'Arabia',
+  me: DEMO_ME, myTeam: [DEMO_ME],
+  enemies: [[{ profileId: 1, name: 'SwedishGoblinTwitch', civ: 'Slavs', colorHex: '#FF0000' }]],
+};
+const DEMO_EVENTS = {
+  intro: { mod: 'intro', type: 'match-start', payload: () => ({ type: 'match-start', match: DEMO_MATCH }) },
+  sub: { mod: 'alerts', type: 'sub', payload: () => ({ type: 'sub', id: 'test-demo-sub', name: 'IronSquire', tier: '1', months: 1 }) },
+  follow: { mod: 'alerts', type: 'follow', payload: () => ({ type: 'follow', id: 'test-demo-follow', name: 'IronSquire' }) },
+};
+for (const key of demos) {
+  const d = DEMO_EVENTS[key];
+  if (!d) continue;
+  const t0 = Date.now();
+  const timer = setInterval(() => {
+    const ready = stage.querySelector('[data-mod="' + d.mod + '"]');
+    if (!ready && Date.now() - t0 < 2000) return;
+    clearInterval(timer);
+    bus.emit(d.type, d.payload());
+  }, 100);
 }
 
 sync();
