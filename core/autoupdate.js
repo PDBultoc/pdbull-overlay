@@ -10,18 +10,18 @@ export function shouldReload(loaded, latest) {
 
 // GitHub Pages lets browsers cache files for 10 minutes, so a plain reload can come
 // back with old modules. Refresh every code file in the HTTP cache first.
-const CODE = ['overlay.html', 'panel.html', 'panel.js',
+export const CODE = ['overlay.html', 'panel.html', 'panel.js', 'panel.css',
   'scenes/starting.html', 'scenes/starting.js', 'scenes/starting.css',
   'scenes/brb.html', 'scenes/brb.js', 'scenes/brb.css',
-  'core/bus.js', 'core/settings.js', 'core/remote.js', 'core/autoupdate.js', 'core/aoe2.js',
-  'core/twitchchat.js', 'core/streamlabs.js', 'core/registry.js', 'core/scene.js', 'core/alertlogic.js', 'core/intrologic.js',
+  'core/alertlogic.js', 'core/aoe2.js', 'core/autoupdate.js', 'core/brbchat.js', 'core/bus.js', 'core/camchatlogic.js',
+  'core/countdown.js', 'core/intrologic.js', 'core/panelcore.js', 'core/registry.js', 'core/remote.js', 'core/scene.js',
+  'core/settings.js', 'core/streamlabs.js', 'core/twitchchat.js',
+  'modules/camchat.js', 'modules/camchat.css', 'modules/intro.js', 'modules/intro.css', 'modules/alerts.js', 'modules/alerts.css',
   'shared/war-table.js', 'shared/campaign.js', 'shared/tokens.css'];
 
 async function refreshCache(fetchFn) {
-  let mods = [];
-  try { mods = (await import('./registry.js')).MODULES.map((n) => `modules/${n}.js`); } catch { /* ignore */ }
   const root = new URL('../', import.meta.url);
-  await Promise.all([...CODE, ...mods].map((f) => fetchFn(new URL(f, root).href, { cache: 'reload' }).catch(() => {})));
+  await Promise.all(CODE.map((f) => fetchFn(new URL(f, root).href, { cache: 'reload' }).catch(() => {})));
 }
 
 export function startAutoUpdate({
