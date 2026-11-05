@@ -107,7 +107,10 @@ if (demos.includes('1')) { // review only: sample chat lines
   setTimeout(() => msgs.forEach((m, i) => setTimeout(() => bus.emit('chat', m), i * 100)), 300);
 }
 
-// review only: ?demo=intro | sub | follow emit one synthetic event each, once the target module has mounted (or after 2 s)
+// review only: ?demo=intro | sub | follow | bits50 | bits500 | bits1500 | donation emit one synthetic event each, once the
+// target module has mounted (or after 2 s). &t=<sec> freezes that demo at <sec> into its timeline (deterministic capture,
+// same as the harnesses): headless Edge on SwiftShader gets only a few slow frames and scene.js caps dt at 0.1 s per frame,
+// so a live demo captured with --virtual-time-budget shows the first ~1 s of the animation, not the moment you asked for.
 const DEMO_ME = { profileId: 551021, name: 'PDBull', civ: 'Franks', colorHex: '#405BFF' };
 const DEMO_MATCH = {
   id: 'test-demo-1v1', running: true, mode: '1v1', map: 'Arabia',
@@ -118,16 +121,32 @@ const DEMO_EVENTS = {
   intro: { mod: 'intro', type: 'match-start', payload: () => ({ type: 'match-start', match: DEMO_MATCH }) },
   sub: { mod: 'alerts', type: 'sub', payload: () => ({ type: 'sub', id: 'test-demo-sub', name: 'IronSquire', tier: '1', months: 1 }) },
   follow: { mod: 'alerts', type: 'follow', payload: () => ({ type: 'follow', id: 'test-demo-follow', name: 'IronSquire' }) },
+  bits50: { mod: 'alerts', type: 'bits', payload: () => ({ type: 'bits', id: 'test-demo-bits50', name: 'IronSquire', amount: 50 }) },
+  bits500: { mod: 'alerts', type: 'bits', payload: () => ({ type: 'bits', id: 'test-demo-bits500', name: 'IronSquire', amount: 500 }) },
+  bits1500: { mod: 'alerts', type: 'bits', payload: () => ({ type: 'bits', id: 'test-demo-bits1500', name: 'IronSquire', amount: 1500 }) },
+  donation: { mod: 'alerts', type: 'donation', payload: () => ({ type: 'donation', id: 'test-demo-donation', name: 'IronSquire', amount: 10, currency: 'USD', message: 'Great stream, commander! Here is some gold for the next castle.' }) },
 };
+const demoT = q.has('t') ? Math.max(0, parseFloat(q.get('t')) || 0) : null; // review only
+async function freezeDemo(d, payload) {
+  const h = live.get(d.mod) && live.get(d.mod).handle;
+  if (d.mod === 'intro' && h && h.freezeAt) { await h.freezeAt(payload.match, demoT); document.title = 'ready'; return; }
+  bus.emit(d.type, payload);
+  if (!h || !h.debug) return;
+  await h.debug.whenPlaying();
+  await new Promise((r) => setTimeout(r, 150));
+  h.debug.advance(demoT);
+  document.title = 'ready';
+}
 for (const key of demos) {
   const d = DEMO_EVENTS[key];
   if (!d) continue;
   const t0 = Date.now();
   const timer = setInterval(() => {
-    const ready = stage.querySelector('[data-mod="' + d.mod + '"]');
+    const ready = live.get(d.mod) && live.get(d.mod).handle;
     if (!ready && Date.now() - t0 < 2000) return;
     clearInterval(timer);
-    bus.emit(d.type, d.payload());
+    if (demoT != null) freezeDemo(d, d.payload()).catch((e) => console.warn('demo freeze failed', (e && e.message) || e));
+    else bus.emit(d.type, d.payload());
   }, 100);
 }
 
