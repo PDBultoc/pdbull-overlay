@@ -2,7 +2,7 @@
 // Ported from prototypes/intro.js. Mounted by overlay.html; plays on bus 'match-start' (real poller event or panel test), once per match id.
 // No WebGL while idle: the scene is created on play and disposed when the intro ends.
 import { createScene } from '../core/scene.js';
-import { introFromMatch, introCivs, fitSize, shouldPlay, stretchTime } from '../core/intrologic.js';
+import { introFromMatch, introCivs, fitSize, nextAction, stretchTime } from '../core/intrologic.js';
 
 const BASE_DUR = 5.2;
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
@@ -37,7 +37,14 @@ function buildSeal(wt, THREE, CLOTH, data, civs) {
     t.anisotropy = 8; t.needsUpdate = true; return t;
   };
   const hexStr = (c, k = 0) => { const col = new THREE.Color(c); if (k < 0) col.lerp(new THREE.Color(0x0a0604), -k); else if (k > 0) col.lerp(new THREE.Color(0xf4e6c8), k); return '#' + col.getHexString(); };
-  const clothOf = (name) => (CLOTH && CLOTH[name] != null ? CLOTH[name] : 0x8c2c22);
+  // light dyes (yellow, grey, orange) are darkened so the gold embroidery stays legible (blue/green already use the deep cloth presets)
+  const clothOf = (name) => {
+    const base = CLOTH && CLOTH[name] != null ? CLOTH[name] : 0x8c2c22;
+    const c = new THREE.Color(base);
+    const luma = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b; // linear-space luma of the sRGB-authored hex
+    const k = Math.min(0.72, Math.max(0, (Math.pow(luma, 1 / 2.2) - 0.30) * 3.2));
+    return k > 0 ? c.lerp(new THREE.Color(0x120a05), k).getHex() : base;
+  };
 
   // rig (transparent canvas, own lights)
   wt.hemi.color.set(0x9a7c5a); wt.hemi.groundColor.set(0x1d1209);
@@ -92,6 +99,11 @@ function buildSeal(wt, THREE, CLOTH, data, civs) {
       const px = fitSize((p) => { g.font = `700 ${p}px ${TITLE}`; return g.measureText(text).width; }, maxW, base, min);
       g.font = `700 ${px}px ${TITLE}`; return px;
     };
+    // names carry a thin dark outline so the gold stays legible on every dye
+    const inked = (text, x, y) => {
+      g.save(); g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = 'rgba(22,12,4,0.6)'; g.strokeText(text, x, y); g.restore();
+      g.fillStyle = gg; g.fillText(text, x, y);
+    };
     g.shadowColor = 'rgba(0,0,0,0.65)'; g.shadowBlur = 6; g.shadowOffsetY = 5;
     g.fillStyle = gg;
     const n = side.names.length;
@@ -101,7 +113,7 @@ function buildSeal(wt, THREE, CLOTH, data, civs) {
       const hasCiv = !!sideCivs[0];
       const y = hasCiv ? ch * 0.545 : ch * 0.585;
       fitText(text, nm.length > 7 ? 168 : 200, 38);
-      g.fillText(text, tx, y);
+      inked(text, tx, y);
       if (hasCiv) {
         g.shadowBlur = 4; g.shadowOffsetY = 3;
         g.fillStyle = '#e9dcc0'; g.font = `italic 600 88px ${SERIF}`;
@@ -117,7 +129,7 @@ function buildSeal(wt, THREE, CLOTH, data, civs) {
         const text = nm.toUpperCase();
         const px = fitText(text, base, 34);
         g.fillStyle = gg;
-        g.fillText(text, tx, y0 + i * slot + px * 0.35);
+        inked(text, tx, y0 + i * slot + px * 0.35);
       });
     }
     g.shadowColor = 'transparent';
@@ -341,14 +353,24 @@ export function mount(root, ctx = {}) {
   const total = Math.max(BASE_DUR, Number(cfg.minSeconds) || 0);
   root.innerHTML = '<div class="band"><div class="gl"></div></div>';
   const band = root.querySelector('.band'), gl = root.querySelector('.gl');
-  let sc = null, busy = false, dead = false, safety = 0;
+  let sc = null, busy = false, dead = false, safety = 0, pending = null;
 
   const bandOpacity = (tt) => { band.style.opacity = sm(seg(tt, 0, 0.25)) * (1 - sm(seg(tt, 4.95, 5.2))); };
   function finish() {
     clearTimeout(safety); safety = 0;
     band.style.opacity = 0;
     if (sc) { sc.dispose(); sc = null; }
+    release();
+  }
+  // a match that arrived while an intro was busy is kept (latest wins) and shown when the current one ends
+  function release() {
     busy = false;
+    if (pending && !dead) { const m = pending; pending = null; setTimeout(() => request(m), 0); }
+  }
+  function request(match) {
+    const a = nextAction(globalThis.sessionStorage, match, busy);
+    if (a === 'queue') pending = match;
+    else if (a === 'play') play(match);
   }
 
   async function prepare(match) {
@@ -366,7 +388,7 @@ export function mount(root, ctx = {}) {
     busy = true;
     try {
       const prep = await prepare(match);
-      if (!prep || dead) { busy = false; return false; }
+      if (!prep || dead) { release(); return false; }
       let T = 0, inst = null;
       sc = createScene({
         canvasHost: gl, maxFps: 60, tableOpts: TABLE_OPTS,
@@ -403,8 +425,7 @@ export function mount(root, ctx = {}) {
   if (bus && bus.on) {
     offs.push(bus.on('match-start', (p) => {
       const match = p && p.match;
-      if (!match || !shouldPlay(globalThis.sessionStorage, match)) return;
-      play(match);
+      request(match);
     }));
   }
 

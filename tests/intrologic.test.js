@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { normalizeMatch } from '../core/aoe2.js';
-import { introFromMatch, colourName, fitSize, shouldPlay, introCivs, stretchTime } from '../core/intrologic.js';
+import { introFromMatch, colourName, fitSize, shouldPlay, nextAction, introCivs, stretchTime } from '../core/intrologic.js';
 
 const P = (id, name, hex, civ = 'Franks') => ({ profileId: id, name, civ, colorHex: hex });
 const raw = JSON.parse(fs.readFileSync(new URL('./fixtures/pa100.json', import.meta.url), 'utf8'));
@@ -78,21 +78,34 @@ test('introCivs: civs per side, blank when the lobby hides civs', () => {
   assert.equal(introCivs({ ...m, hideCivs: true }).left[0], '');
 });
 
-test('team game on the real browser fixture (pdbull-tg.json) when present', (t) => {
-  const url = new URL('./fixtures/pdbull-tg.json', import.meta.url);
-  if (!fs.existsSync(url)) { t.skip('tests/fixtures/pdbull-tg.json not saved yet (controller adds it from the browser)'); return; }
-  const data = JSON.parse(fs.readFileSync(url, 'utf8'));
-  const arr = Array.isArray(data) ? data : data.matches || [];
-  const tg = arr.map((r) => normalizeMatch(r, 551021)).find((m) => m && m.mode === 'tg');
-  assert.ok(tg, 'fixture holds a team game');
-  const i = introFromMatch(tg);
-  assert.equal(i.mode, 'team');
-  assert.equal(i.map, tg.map);
-  for (const side of [i.left, i.right]) {
-    assert.ok(side.names.length >= 1 && side.names.length <= 4);
-    for (const n of side.names) assert.ok(n && n !== 'Player');
-  }
-  assert.equal(i.left.names[0], tg.me.name);
+test('real team games (pdbull-tg.json): names, sides, map, colours', () => {
+  const data = JSON.parse(fs.readFileSync(new URL('./fixtures/pdbull-tg.json', import.meta.url), 'utf8'));
+  const ms = [0, 1].map((k) => normalizeMatch(data[k], 551021));
+  // [0] 3v3 Arena, Paul on teams[0]
+  assert.deepEqual(introFromMatch(ms[0]), {
+    left: { names: ['PDBull', 'SwedishGoblinTwitch', 'Havsutsikt'], colour: 'yellow' },
+    right: { names: ['Javisty', '[DOV] ReaperWins', '[DOV] The_GothFather'], colour: 'grey' },
+    map: 'Arena', mode: 'team',
+  });
+  // [1] 2v2 Black Forest, Paul on teams[1]: left must still be Paul's team
+  assert.deepEqual(introFromMatch(ms[1]), {
+    left: { names: ['PDBull', 'SwedishGoblinTwitch'], colour: 'blue' },
+    right: { names: ['Rocgash', 'omnomnomnivore'], colour: 'yellow' },
+    map: 'Black Forest', mode: 'team',
+  });
+});
+
+test('nextAction: record the id only when the intro actually starts; busy keeps it pending', () => {
+  const mem = () => { const d = {}; return { getItem: (k) => (k in d ? d[k] : null), setItem: (k, v) => { d[k] = String(v); } }; };
+  const s = mem();
+  assert.equal(nextAction(s, { id: 1 }, true), 'queue');
+  assert.equal(nextAction(s, { id: 1 }, false), 'play'); // not lost: id 1 was never recorded while busy
+  assert.equal(nextAction(s, { id: 1 }, false), 'skip');
+  assert.equal(nextAction(s, { id: 1 }, true), 'skip');  // duplicate of a played match is not queued
+  assert.equal(nextAction(s, { id: 'test-4v4' }, true), 'queue');
+  assert.equal(nextAction(s, { id: 'test-4v4' }, false), 'play');
+  assert.equal(nextAction(s, null, false), 'skip');
+  assert.equal(nextAction(s, { id: undefined }, false), 'skip');
 });
 
 test('fitSize: shrinks to the width, never below the floor, never grows', () => {

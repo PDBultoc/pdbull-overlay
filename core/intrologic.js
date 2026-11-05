@@ -88,6 +88,19 @@ export function shouldPlay(storage, match) {
   return true;
 }
 
+/** 'play' (id recorded now), 'queue' (an intro is running: keep the match pending, nothing recorded) or 'skip' (already played / invalid). */
+export function nextAction(storage, match, busy) {
+  if (!match || match.id == null) return 'skip';
+  const test = /^test-/.test(String(match.id));
+  if (busy) {
+    if (test) return 'queue';
+    let seen = [];
+    try { seen = JSON.parse((storage && storage.getItem(KEY)) || '[]'); if (!Array.isArray(seen)) seen = []; } catch { seen = []; }
+    return seen.includes(String(match.id)) ? 'skip' : 'queue';
+  }
+  return shouldPlay(storage, match) ? 'play' : 'skip';
+}
+
 export const HOLD_AT = 3.9;
 /** timeline time for wall time t when the intro should last `total` s instead of the base `base` s: the stamped state is held at HOLD_AT. */
 export function stretchTime(t, total, base) {

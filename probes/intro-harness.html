@@ -31,6 +31,20 @@ const CASES = {
     const t2 = [P(21, 'SwedishGoblinTwitch', '#FF0000', 'Britons'), P(22, 'Nagabhata', '#FF9600', 'Gurjaras'), P(23, 'Mate_Number_Three', '#797979', 'Slavs'), P(24, 'Foe_D', '#FF57B3', 'Turks')];
     return { id: 'test-4v4', mode: 'tg', map: 'Black Forest', me: t1[0], myTeam: t1, enemies: [t2], hideCivs: false };
   })(),
+  // REAL team games from tests/fixtures/pdbull-tg.json (names, civs, hexes copied; left = Paul's team, Paul first)
+  tg3: (() => {
+    const t1 = [P(551021, 'PDBull', '#FFFF00', 'Byzantines'), P(20186100, 'SwedishGoblinTwitch', '#FF9600', 'Malians'), P(1517548, 'Havsutsikt', '#FF0000', 'Ethiopians')];
+    const t2 = [P(392423, 'Javisty', '#797979', 'Teutons'), P(9894577, '[DOV] ReaperWins', '#00FFFF', 'Persians'), P(1078238, '[DOV] The_GothFather', '#405BFF', 'Dravidians')];
+    return { id: 'test-tg3', mode: 'tg', map: 'Arena', me: t1[0], myTeam: t1, enemies: [t2], hideCivs: false };
+  })(),
+  tg2: (() => {
+    const t1 = [P(551021, 'PDBull', '#405BFF', 'Muisca'), P(20186100, 'SwedishGoblinTwitch', '#00FFFF', 'Slavs')];
+    const t2 = [P(17750263, 'Rocgash', '#FFFF00', 'Bohemians'), P(1978798, 'omnomnomnivore', '#FF0000', 'Georgians')];
+    return { id: 'test-tg2', mode: 'tg', map: 'Black Forest', me: t1[0], myTeam: t1, enemies: [t2], hideCivs: false };
+  })(),
+  // palette coverage (SYNTHETIC, 1v1 with the real names): orange vs purple, and yellow vs grey
+  orpu: (() => { const a = P(551021, 'PDBull', '#FF9600', 'Koreans'), b = P(2, 'SwedishGoblinTwitch', '#FF57B3', 'Portuguese'); return { id: 'test-orpu', mode: '1v1', map: 'Arabia', me: a, myTeam: [a], enemies: [[b]], hideCivs: false }; })(),
+  yegr: (() => { const a = P(551021, 'PDBull', '#FFFF00', 'Koreans'), b = P(2, 'SwedishGoblinTwitch', '#797979', 'Portuguese'); return { id: 'test-yegr', mode: '1v1', map: 'Arabia', me: a, myTeam: [a], enemies: [[b]], hideCivs: false }; })(),
   longteam: (() => {
     const t1 = [P(551021, LONG, '#405BFF', 'Franks'), P(11, 'Short', '#00FF00', 'Mongols'), P(12, 'Mid_Length_Name', '#00FFFF', 'Aztecs'), P(13, LONG.replace('Extremely', 'Another'), '#FFFF00', 'Huns')];
     const t2 = [P(21, LONG.toLowerCase(), '#FF0000', 'Britons'), P(22, 'X', '#FF9600', 'Gurjaras')];
