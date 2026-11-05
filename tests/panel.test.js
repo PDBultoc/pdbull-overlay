@@ -44,7 +44,7 @@ test('test buttons emit the documented alert payloads', () => {
   assert.equal(d.type, 'donation'); assert.equal(d.currency, 'USD'); assert.ok(d.amount > 0); assert.ok(d.message.length > 0);
   assert.ok(ev('donLong').payload.message.length > 100);
   const ln = ev('longName').payload;
-  assert.equal(ln.name, 'Extremely_Long_Name_25ch'); assert.equal(ln.name.length, MAX_NAME);
+  assert.equal(ln.name, 'Extremely_Long_Name_25chr'); assert.equal(ln.name.length, MAX_NAME);
   for (const t of TEST_ALERTS) { const p = ev(t.key).payload; assert.ok(p.id && p.name && ['follow', 'sub', 'bits', 'donation'].includes(p.type)); assert.equal(ev(t.key).name, p.type); }
   assert.notEqual(testEvent('follow', 1).payload.id, testEvent('follow', 2).payload.id);
 });

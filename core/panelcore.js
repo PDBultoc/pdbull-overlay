@@ -1,6 +1,6 @@
 // Pure helpers for the dock panel (node-testable, no DOM).
-export const MAX_NAME = 24;
-export const LONG_NAME = 'Extremely_Long_Name_25ch';
+export const MAX_NAME = 25;
+export const LONG_NAME = 'Extremely_Long_Name_25chr';
 
 export const TEST_ALERTS = [
   { key: 'follow', label: 'Follow' },
