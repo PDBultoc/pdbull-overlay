@@ -32,7 +32,7 @@
 //        apicheck    T2 API self-check (candle lightOffset, DOF order, fog opacity/colour, cloth presets): console APICHECK lines
 // ?shot=1&t=<sec>    stop the clock and render exactly once at t (deterministic screenshots)
 import { createWarTable, makePiece, makeFigurine, fitStage, THREE } from './war-table.js';
-import { makeCampaignMap, makeToken, makeBanner, makeProp, makeVillage, tokenFaceCanvas, TOKEN_TYPES, AGES, PLAYER_COLOURS } from './campaign.js';
+import { makeCampaignMap, makeToken, makeBanner, makeProp, makeVillage, tokenFaceCanvas, TOKEN_TYPES, AGES, PLAYER_COLOURS, CLOTH_COLOURS } from './campaign.js';
 
 fitStage(document.getElementById('stage'));
 const q = new URLSearchParams(location.search);
@@ -215,12 +215,24 @@ if (scene === 'tokenart') {
     check('setFogOpacity clamps to 1', us.every((u, i) => near(u.value, base[i])), us.map((u) => u.value).join(','));
     U.setFogOpacity(0);
     check('setFogOpacity(0) clears', us.every((u) => u.value === 0));
+    // fix round 1: fog must cover the map up to the curled north edge (no fade-out band) and hug the paper at the
+    // edges (no layer standing above the paper silhouette = the old pale wedges)
+    {
+      let worst = 0, n = 0;
+      for (const m of U.fogMeshes) { const p = m.geometry.attributes.position, uv = m.geometry.attributes.fogUv;
+        for (let i = 0; i < p.count; i++) { if (!uv || uv.getY(i) < 0.999) continue; n++;
+          worst = Math.max(worst, Math.abs(p.getY(i) - U.surfaceY(p.getX(i), -U.depth / 2))); } }
+      check('fog hugs the paper at the north edge (<= 0.01)', n > 0 && worst <= 0.01, 'edgeVerts=' + n + ' worst=' + worst.toFixed(4));
+      const frag = U.fogMeshes[0].material.userData.fogFragment;
+      check('no north fade-out in the fog shader', typeof frag === 'string' && !/vFogUv\.y\)\)/.test(frag), 'fogFragment exposed=' + (typeof frag === 'string'));
+    }
     check('fog colours are warm (r > g > b)', U.fogMeshes.every((m) => { const c = m.material.color; return c.r > c.g && c.g > c.b; }), U.fogMeshes.map((m) => m.material.color.getHexString()).join(','));
   });
   run('cloth presets', () => {
     check('PLAYER_COLOURS.cloth.blue', PLAYER_COLOURS.cloth?.blue === 0x14307f, String(PLAYER_COLOURS.cloth?.blue));
     check('PLAYER_COLOURS.cloth.green', PLAYER_COLOURS.cloth?.green === 0x245a3a, String(PLAYER_COLOURS.cloth?.green));
-    check('cloth not listed as a colour name', !Object.keys(PLAYER_COLOURS).includes('cloth'));
+    check('spread keeps cloth', ({ ...PLAYER_COLOURS }).cloth?.blue === 0x14307f, JSON.stringify({ ...PLAYER_COLOURS }));
+    check('CLOTH_COLOURS export = PLAYER_COLOURS.cloth', CLOTH_COLOURS === PLAYER_COLOURS.cloth && CLOTH_COLOURS.green === 0x245a3a);
     check('makeBanner(blue) uses cloth blue', makeBanner('blue').userData.clothColour === 0x14307f, String(makeBanner('blue').userData.clothColour));
     check('makeBanner(red) falls back to red', makeBanner('red').userData.clothColour === PLAYER_COLOURS.red, String(makeBanner('red').userData.clothColour));
   });

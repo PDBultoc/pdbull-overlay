@@ -18,18 +18,20 @@ export const PLAYER_COLOURS = {
   teal: 0x2d6a68, purple: 0x5b3b6f, grey: 0x6d6862, orange: 0xa65a24,
 };
 /**
- * PLAYER_COLOURS.cloth: deeper dye presets for banner silk (round 2). Under the warm sheen the muted pigment blue
- * and green read blue-grey; names missing here fall back to the pigment colour. Non-enumerable, so
- * Object.keys(PLAYER_COLOURS) still lists only colour names.
+ * CLOTH_COLOURS (also PLAYER_COLOURS.cloth): deeper dye presets for banner silk (round 2). Under the warm sheen the
+ * muted pigment blue and green read blue-grey; names missing here fall back to the pigment colour.
+ * .cloth is a normal (enumerable) entry so {...PLAYER_COLOURS} keeps it; code listing colour names should skip
+ * non-number entries (pcol does).
  */
-Object.defineProperty(PLAYER_COLOURS, 'cloth', { enumerable: false, value: Object.freeze({ blue: 0x14307f, green: 0x245a3a }) });
+export const CLOTH_COLOURS = Object.freeze({ blue: 0x14307f, green: 0x245a3a });
+PLAYER_COLOURS.cloth = CLOTH_COLOURS;
 function pcol(c) {
   if (typeof c === 'string' && typeof PLAYER_COLOURS[c] === 'number') return new THREE.Color(PLAYER_COLOURS[c]);
   return new THREE.Color(c ?? PLAYER_COLOURS.red);
 }
 /** banner cloth colour: the cloth preset for a colour name, else the same as pcol */
 function clothCol(c) {
-  if (typeof c === 'string' && PLAYER_COLOURS.cloth[c] != null) return new THREE.Color(PLAYER_COLOURS.cloth[c]);
+  if (typeof c === 'string' && CLOTH_COLOURS[c] != null) return new THREE.Color(CLOTH_COLOURS[c]);
   return pcol(c);
 }
 const css = (col, k = 0) => { // k<0 darker, k>0 lighter
@@ -434,10 +436,19 @@ function fogMaterial(maskTex, W, D, L) {
   };
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform vec2 uSize; varying vec2 vFogUv;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvFogUv = vec2(position.x / uSize.x + 0.5, 0.5 - position.z / uSize.y);');
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform vec2 uSize; attribute vec2 fogUv; varying vec2 vFogUv;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvFogUv = fogUv;');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + FOG_GLSL)
-      .replace('#include <alphamap_fragment>', `#include <alphamap_fragment>
+      .replace('#include <alphamap_fragment>', '#include <alphamap_fragment>\n' + FOG_FRAGMENT);
+  };
+  m.customProgramCacheKey = () => 'fog-mist-r2b';
+  m.userData.uniforms = U;
+  m.userData.fogFragment = FOG_FRAGMENT;
+  // the layers sit only ~0.005 above the paper at the edges: pull them forward in depth so they never z-fight it
+  m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -2;
+  return m;
+}
+const FOG_FRAGMENT = /* glsl */`
         float fm = texture2D(uMask, vFogUv).r;
         vec2 q = vFogUv * uSize * uScale;
         float ft = uTime;
@@ -448,18 +459,12 @@ function fogMaterial(maskTex, W, D, L) {
         float fog = 1.0 - smoothstep(uLo, uHi, fedge);
         float fden = mix(uMinD, 1.0, smoothstep(0.25, 0.72, fnz)) * mix(0.8, 1.0, fst);
         vec2 fb = min(vFogUv, 1.0 - vFogUv) * uSize;
-        // the mist layers float above the paper; over the curled north lip (vFogUv.y > 0.9) they stuck out past the
-        // paper edge as pale wedges / a jagged smear against the dark table. Fade every layer out before the curl and
-        // keep a wide soft border on the other edges (round-2 fix, first done locally in starting.js).
-        float fbord = smoothstep(0.08, 0.75, min(fb.x, fb.y)) * (1.0 - smoothstep(0.83, 0.895, vFogUv.y));
+        // fog covers the map right up to every edge, the curled north lip included; the layers hug the paper there
+        // (fogGeo), so only a thin soft border (0.1 units, ~1.4% of the depth) is left to soften the cut edge
+        float fbord = smoothstep(0.0, 0.1, min(fb.x, fb.y));
         diffuseColor.a *= fog * fden * uOpacity * fbord;
         float frim = clamp(fog * (1.0 - fog) * 4.0, 0.0, 1.0);
-        diffuseColor.rgb *= (0.88 + 0.24 * fst) * (1.0 - uPool * frim);`);
-  };
-  m.customProgramCacheKey = () => 'fog-mist-r2';
-  m.userData.uniforms = U;
-  return m;
-}
+        diffuseColor.rgb *= (0.88 + 0.24 * fst) * (1.0 - uPool * frim);`;
 
 /**
  * makeCampaignMap({width=11, depth=7.4, seed=3, fog=true, village=true|{age,colour}, colour='red'}) -> THREE.Group
@@ -497,6 +502,25 @@ export function makeCampaignMap(o = {}) {
     const geo = new THREE.PlaneGeometry(W, D, sx, sz); geo.rotateX(-Math.PI / 2);
     const p = geo.attributes.position;
     for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i); p.setXYZ(i, x, surf(x, z) + yOff, curlZ(x, z)); }
+    geo.computeVertexNormals(); return geo;
+  }
+  // fog layer surface (fix round 1): the mist floats h along the paper's NORMAL (so over the curl it stays parallel
+  // to the rolled paper instead of standing straight up past its lip) and the lift shrinks to ~0.005 within ~0.9
+  // units of every edge, so no layer rises above the paper's silhouette (the old pale wedges / jagged smear).
+  // fogUv = the flat map uv of each vertex (curl-independent) for the mask and the noise.
+  function fogGeo(sx, sz, h) {
+    const geo = new THREE.PlaneGeometry(W, D, sx, sz); geo.rotateX(-Math.PI / 2);
+    const p = geo.attributes.position, uv = new Float32Array(p.count * 2), e = 0.01;
+    const S = (x, z) => new THREE.Vector3(x, surf(x, z), curlZ(x, z));
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), z = p.getZ(i);
+      uv[i * 2] = x / W + 0.5; uv[i * 2 + 1] = 0.5 - z / D;
+      const P = S(x, z), tx = S(x + e, z).sub(P), tz = S(x, z + e).sub(P), n = tz.cross(tx).normalize();
+      const edge = Math.min(W / 2 - Math.abs(x), D / 2 - Math.abs(z));
+      P.addScaledVector(n, Math.max(0.005, h * smooth(0.0, 0.9, edge)));
+      p.setXYZ(i, P.x, P.y, P.z);
+    }
+    geo.setAttribute('fogUv', new THREE.BufferAttribute(uv, 2));
     geo.computeVertexNormals(); return geo;
   }
   // ---- paper material
@@ -554,7 +578,7 @@ export function makeCampaignMap(o = {}) {
   const fogMeshes = [];
   if (o.fog !== false) {
     layers.forEach((L, i) => {
-      const m = new THREE.Mesh(paperGeo(110, 74, L.h), fogMaterial(maskTex, W, D, L));
+      const m = new THREE.Mesh(fogGeo(160, 108, L.h), fogMaterial(maskTex, W, D, L));
       m.renderOrder = 2 + i; m.castShadow = false; m.receiveShadow = false; group.add(m); fogMeshes.push(m);
     });
   }
