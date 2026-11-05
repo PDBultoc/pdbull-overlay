@@ -29,7 +29,8 @@ export function mapEvent(raw) {
   return raw.message.filter((m) => m && typeof m === 'object').map((m) => {
     const id = str(m._id || m.id || m.event_id) || fallbackId(t, m);
     const name = str(m.name || m.from);
-    if (t === 'donation') return { type: 'donation', id, name, amount: num(m.amount), currency: str(m.currency || 'USD'), message: str(m.message) };
+    // Real log (T10): `name` is the RECIPIENT channel, the donor is `from`.
+    if (t === 'donation') return { type: 'donation', id, name: str(m.from || m.from_display_name || m.name), amount: num(m.amount), currency: str(m.currency || 'USD'), message: str(m.message) };
     if (t === 'follow') return { type: 'follow', id, name };
     if (t === 'subscription' || t === 'resub') return subEvent(id, name, m);
     if (t === 'bits') return { type: 'bits', id, name, amount: num(m.amount), message: str(m.message) };

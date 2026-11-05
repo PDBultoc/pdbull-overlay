@@ -55,3 +55,42 @@ test('stream label template prefixes are stripped (seen on a Streamlabs stream 2
     most_recent_follower: 'New Follower: drowsyduck', most_recent_donator: 'Donation Nub: $10.00', most_recent_subscriber: 'New Subscriber: kapten' } } }),
   { follow: { name: 'drowsyduck' }, donation: { name: 'Nub', amount: 10, currency: 'USD' }, sub: { name: 'kapten', months: 1 } });
 });
+
+// T10 real-data gate: Paul's own socket log (Streamlabs "Test" buttons, 2026-11-05).
+import { readFileSync } from 'node:fs';
+const REAL = JSON.parse(readFileSync(new URL('./fixtures/streamlabs-paul.json', import.meta.url), 'utf8'));
+const mapped = (type) => REAL.filter((e) => e.raw.type === type).map((e) => mapEvent(e.raw));
+
+test('real log: follow → Kevin, 2 events with distinct ids', () => {
+  const ev = mapped('follow').flat();
+  assert.equal(ev.length, 2);
+  for (const e of ev) { assert.equal(e.type, 'follow'); assert.equal(e.name, 'Kevin'); }
+  assert.notEqual(ev[0].id, ev[1].id);
+});
+
+test('real log: subscription → sub, kevin, tier 1, months 1', () => {
+  const ev = mapped('subscription').flat();
+  assert.equal(ev.length, 2);
+  for (const e of ev) { assert.equal(e.type, 'sub'); assert.equal(e.name, 'kevin'); assert.equal(e.tier, '1'); assert.equal(e.months, 1); assert.equal(e.gift, undefined); }
+  assert.notEqual(ev[0].id, ev[1].id);
+});
+
+test('real log: bits → Kevin 1000', () => {
+  const ev = mapped('bits').flat();
+  assert.equal(ev.length, 1);
+  assert.equal(ev[0].type, 'bits'); assert.equal(ev[0].name, 'Kevin'); assert.equal(ev[0].amount, 1000);
+});
+
+test('real log: donation shows the donor (from), not the recipient channel (name)', () => {
+  const ev = mapped('donation').flat();
+  assert.equal(ev.length, 1);
+  assert.equal(ev[0].type, 'donation'); assert.equal(ev[0].name, 'Kevin'); assert.equal(ev[0].amount, 92);
+  assert.equal(ev[0].currency, 'EUR'); assert.equal(ev[0].message, 'This is a test donation for €92.00');
+});
+
+test('real log: all other types produce no alert events (for now)', () => {
+  const none = ['alertPlaying', 'streamlabels', 'streamlabels.underlying', 'subscription-playing', 'raid', 'powerUp', 'twitchcharitydonation'];
+  const seen = new Set();
+  for (const e of REAL) if (none.includes(e.raw.type)) { seen.add(e.raw.type); assert.deepEqual(mapEvent(e.raw), [], e.raw.type); }
+  assert.deepEqual([...seen].sort(), [...none].sort());
+});
