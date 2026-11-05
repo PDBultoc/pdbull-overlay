@@ -247,9 +247,10 @@ let synthOn = false;            // synth sounds for the alert being played
 let camEl = null, camBase = '';
 const BW = 1050, BH = 640;
 function camEcho(e) {
+  if (e >= 0.002) findCam();                 // camchat may have mounted since the alert began
   if (!camEl) return;
-  if (e < 0.002) { camEl.style.boxShadow = camBase; return; }
-  camEl.style.boxShadow = `0 0 ${46 * e}px ${6 * e}px rgba(255,179,71,${0.5 * e}), inset 0 0 ${34 * e}px rgba(255,179,71,${0.32 * e}), ${camBase}`;
+  if (e < 0.002) { camEl.style.removeProperty('box-shadow'); return; }   // back to camchat's stylesheet shadow
+  camEl.style.boxShadow = `0 0 ${46 * e}px ${6 * e}px rgba(255,179,71,${0.5 * e}), inset 0 0 ${34 * e}px rgba(255,179,71,${0.32 * e})${camBase ? ', ' + camBase : ''}`;
 }
 function shake(y) { wt.camera.setViewOffset(BW, BH, 0, y, BW, BH); }
 function cues() { const done = new Set(); return (name, t, at) => { if (t >= at && !done.has(name)) { done.add(name); return true; } return false; }; }
@@ -904,6 +905,14 @@ function ensureAssets() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// camchat mounts through an async import and may remount: look the camera frame up at each alert start (absent = no echo)
+function findCam() {
+  if (camEl && camEl.isConnected) return;
+  camEl = document.querySelector('[data-mod=camchat] .cam');
+  camBase = camEl ? getComputedStyle(camEl).boxShadow : '';
+  if (camBase === 'none') camBase = '';
+}
+
 // mount(layer, { settings, bus, cfg }) -> { unmount(), debug }
 export function mount(layer, ctx = {}) {
   const cfg = ctx.cfg || {};
@@ -912,8 +921,6 @@ export function mount(layer, ctx = {}) {
   layer.innerHTML = '<div class="band"><div class="fill"></div><div class="txt"></div></div>';
   glEl = layer.querySelector('.fill');
   txt = layer.querySelector('.txt');
-  camEl = document.querySelector('[data-mod=camchat] .cam');
-  camBase = camEl ? camEl.style.boxShadow : '';
 
   let scene = null, disposeTimer = 0, dead = false, starting = null, fontsDone = false;
   const sounds = new Set();
@@ -946,6 +953,7 @@ export function mount(layer, ctx = {}) {
         synthOn = cfg.sound !== false && !url;
         if (url) playFile(url);
         glEl.style.opacity = 0;
+        findCam();
         begin(a, resolve);
       }).catch((e) => { console.warn('alert failed', e && e.message); resolve(); });
     });
@@ -979,7 +987,7 @@ export function mount(layer, ctx = {}) {
       if (cur) { try { cur.done(); } catch (e) { /* ignore */ } }
       for (const au of sounds) { try { au.pause(); } catch (e) { /* ignore */ } }
       sounds.clear();
-      if (camEl) camEl.style.boxShadow = camBase;
+      if (camEl) camEl.style.removeProperty('box-shadow');
       disposeScene();
       layer.innerHTML = '';
       glEl = txt = camEl = null;

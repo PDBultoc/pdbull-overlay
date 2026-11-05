@@ -26,7 +26,7 @@ body.shot #panel { display: none; }
   &lifecycle=1  queue + idle-dispose probe, logs lines starting LIFE
   &sounds=1  cfg.sound true (default for captures: false)
 -->
-<div id="stage"><div data-mod="camchat"><div class="cam"></div></div><div data-mod="alerts" id="layer"></div></div>
+<div id="stage"><div data-mod="alerts" id="layer"></div></div>
 <div id="panel">
   <button data-a="follow">follow</button><button data-a="sub">sub</button><button data-a="bits" data-n="50">bits 50</button>
   <button data-a="bits" data-n="500">500</button><button data-a="bits" data-n="1500">1500</button><button data-a="donation">donation</button>
@@ -43,6 +43,11 @@ const bus = { on(t, f) { (handlers.get(t) || handlers.set(t, new Set()).get(t)).
 const cfg = { enabled: true, follow: true, sub: true, bits: true, donation: true, sound: q.get('sounds') === '1', sounds: { follow: '', sub: '', bits: '', donation: '' } };
 const handle = mount(document.getElementById('layer'), { bus, cfg, settings: null });
 window.__alerts = handle;
+// camchat arrives AFTER alerts (async import in overlay.html): add the cam frame late, ?latecam=0 skips it
+if (q.get('latecam') !== '0') setTimeout(() => {
+  const m = document.createElement('div'); m.dataset.mod = 'camchat'; m.innerHTML = '<div class="cam"></div>';
+  document.getElementById('stage').insertBefore(m, document.getElementById('layer'));
+}, 50);
 
 const LONG = 'GG on that Arabia game! The scout rush into a fast castle was brilliant, and the trebuchet push at the end had the whole chat on its feet. Keep the campaign going, commander, here is a little gold for the war chest. ';
 function message() {
@@ -93,7 +98,10 @@ else if (q.get('alert')) {
   bus.emit(type, payload(type));
   if (SHOT) (async () => {
     await handle.debug.whenPlaying();
+    await sleep(150);   // the late cam frame (50 ms) exists now, the alert has already started
     handle.debug.advance(+(q.get('t') || 3));
+    const cam = document.querySelector('[data-mod=camchat] .cam');
+    console.log('CAMECHO inline=' + (cam ? cam.style.boxShadow.slice(0, 40) : 'no-cam'));
     document.title = 'ready t=' + handle.debug.current.t.toFixed(2);
     console.log('alerts ready alert=' + type + ' t=' + handle.debug.current.t.toFixed(2));
   })().catch((e) => console.log('alerts error ' + e));
