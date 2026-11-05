@@ -1,0 +1,14 @@
+/* End scene styles (on top of ../shared/tokens.css). Chat rules are copied 1:1 from scenes/brb.css. */
+.chat {
+  position: absolute; right: 64px; bottom: 54px; width: 520px; pointer-events: none;
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+}
+.chat .msg {
+  font-family: var(--font-ui); font-size: 24px; line-height: 1.32; color: #fbf5e8;
+  opacity: 1; text-align: right; overflow-wrap: anywhere;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 1), 0 0 16px rgba(0, 0, 0, 0.8);
+  animation: msgIn 0.9s var(--ease-heavy);
+}
+.chat .msg b { font-weight: 700; margin-right: 8px; }
+.chat .msg.old { opacity: 0.82; }
+@keyframes msgIn { from { opacity: 0; transform: translateY(14px); } }
