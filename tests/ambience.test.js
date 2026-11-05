@@ -7,7 +7,8 @@ export function makeFakeAudioCtx() {
   const param = (v = 0) => ({
     value: v,
     setValueAtTime(x) { this.value = x; },
-    linearRampToValueAtTime() {},
+    ramps: [],
+    linearRampToValueAtTime(x, t) { this.ramps.push([x, t]); },
     cancelScheduledValues() {},
     setTargetAtTime(x) { this.value = x; },
   });
@@ -53,6 +54,21 @@ test('createAmbience applies layer calibration and master, and start/stop drive 
   assert.ok(started >= 3, 'long-lived noise sources started');
   a.start();
   assert.equal(log.sources.filter((s) => s.started.length).length, started, 'double start is a no-op');
+  const loops = () => log.sources.filter((s) => s.loop && s.started.length);
+  assert.ok(loops().length >= 3);
+  assert.ok(loops().every((s) => s.stopped.length === 0), 'looped sources run before stop()');
+  const fade = log.gains[2]; // createAmbience order: output, master, fadeGain, layers
+  assert.deepEqual(fade.gain.ramps.at(-1)[0], 1, 'fade-in ramp to 1 on start');
   a.stop(800);
-  assert.ok(log.sources.some((s) => s.stopped.length), 'stop stops long-lived sources');
+  assert.ok(loops().every((s) => s.stopped.length === 1), 'stop stops every looped source');
+  assert.equal(fade.gain.ramps.at(-1)[0], 0, 'stop ramps the fade gain to 0');
+});
+
+test('master node (not any gain) carries master; setMaster changes it', () => {
+  const { FakeAudioContext, log } = makeFakeAudioCtx();
+  const ac = new FakeAudioContext();
+  const a = createAmbience(ac, { layers: { candle: 1, hearth: 1, quill: 1 }, master: 0.5 });
+  assert.equal(log.gains[1].gain.value, 0.5);
+  a.setMaster(0.25);
+  assert.equal(log.gains[1].gain.value, 0.25);
 });
