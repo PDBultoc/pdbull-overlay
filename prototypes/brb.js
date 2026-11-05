@@ -3,8 +3,8 @@
 // Query: ?min=<minutes countdown>  ?shot=1 (hide panel, deterministic)  ?t=<seconds to scrub>
 //        ?follower=<name>  ?age=dark|feudal|castle|imperial (starting age)
 // Debug: &dof=0 (no depth of field) &sc=<smoke particles> &wg=<wax glow> &ly=<light lift> &perf=1 (frame ms) &dbg=1
-import { createWarTable, makePiece, fitStage, THREE } from './shared/war-table.js';
-import { makeCampaignMap, makeToken, makeBanner, makeProp, AGES } from './shared/campaign.js';
+import { createWarTable, makePiece, fitStage, THREE } from '../shared/war-table.js';
+import { makeCampaignMap, makeToken, makeBanner, makeProp, AGES } from '../shared/campaign.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 
 const Q = new URLSearchParams(location.search);

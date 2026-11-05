@@ -1,4 +1,4 @@
-/* B2 · BRB (candle) — page styles (on top of shared/tokens.css) */
+/* B2 · BRB (candle) — page styles (on top of ../shared/tokens.css) */
 .smoke-count {
   position: absolute; font-family: var(--font-serif); font-style: italic; font-weight: 500;
   font-size: 34px; letter-spacing: 0.04em; color: var(--ivory-300); opacity: 0.82;

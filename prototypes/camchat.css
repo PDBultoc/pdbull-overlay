@@ -1,5 +1,5 @@
 /* D1 Camera frame + Chat — walnut & brass (round 2: single variant) */
-.stage .bg { position: absolute; inset: 0; background: #0a0705 url("shared/game.webp") center / 1920px 1080px no-repeat; }
+.stage .bg { position: absolute; inset: 0; background: #0a0705 url("../shared/game.webp") center / 1920px 1080px no-repeat; }
 body.nobg .stage .bg { display: none; }
 
 /* ---------- placeholder webcam ---------- */

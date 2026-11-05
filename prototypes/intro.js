@@ -1,7 +1,7 @@
 // E3 Match intro (seal) — two banners unroll, a wax seal "VS" is stamped, a parchment scroll "Map · Arabia" opens under it.
 // Band = top centre x 625-1675, pushed down so nothing covers the game timer (x 655-870, y 0-25).
 // ?shot=1 (hide panel, auto-fire at 600 ms)  ?t=<sec> (freeze at that time)  ?bg=0 (transparent page)  ?crop=1 (review aid)
-import { createWarTable, fitStage, THREE } from './shared/war-table.js';
+import { createWarTable, fitStage, THREE } from '../shared/war-table.js';
 
 const q = new URLSearchParams(location.search);
 const SHOT = q.get('shot') === '1';

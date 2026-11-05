@@ -5,7 +5,7 @@
    donation -> sealed scroll: wax breaks, parchment unrolls, the message is written in ink
    URL: ?alert=follow|sub|gift|bits|donation &name= &bits= &amount= &msg= (msg=long for a sample)
         &tier=1|2|3|prime &months= &gift=N &sound=1 &shot=1&t=<s> */
-import { createWarTable, makeWoodCanvases, fitStage, THREE, _util } from './shared/war-table.js';
+import { createWarTable, makeWoodCanvases, fitStage, THREE, _util } from '../shared/war-table.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const q = new URLSearchParams(location.search);

@@ -2,8 +2,8 @@
 // grows Dark -> Feudal -> Castle -> Imperial over one loop, tokens move, resource props and one chess king by the candle.
 // Params: ?min= countdown minutes, ?left=<s> remaining seconds, ?follower=<name>, ?loop=<s> loop length (default 120),
 // ?shot=1&t=<s> deterministic capture frozen at scene time t.
-import { createWarTable, makePiece, makeWoodCanvases, getMaterials, fitStage, THREE } from './shared/war-table.js';
-import { makeCampaignMap, makeToken, makeBanner, makeProp, AGES } from './shared/campaign.js';
+import { createWarTable, makePiece, makeWoodCanvases, getMaterials, fitStage, THREE } from '../shared/war-table.js';
+import { makeCampaignMap, makeToken, makeBanner, makeProp, AGES } from '../shared/campaign.js';
 
 const q = new URLSearchParams(location.search);
 const SHOT = q.get('shot') === '1';
