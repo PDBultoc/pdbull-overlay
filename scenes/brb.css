@@ -1,0 +1,31 @@
+/* BRB scene styles (on top of ../shared/tokens.css). Round-2 review: chat and follower text larger and brighter. */
+.follower {
+  position: absolute; left: 64px; bottom: 54px; max-width: 900px; pointer-events: none;
+  transition: opacity 1.2s var(--ease-heavy), transform 1.2s var(--ease-heavy);
+}
+.follower[hidden] { display: none; }
+.follower .f-label {
+  font-family: var(--font-title); font-size: 18px; font-weight: 600; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--ivory-200); opacity: 1; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.95), 0 0 14px rgba(0, 0, 0, 0.7);
+}
+.follower .f-name {
+  margin-top: 4px; font-family: var(--font-serif); font-weight: 700; font-size: 38px; line-height: 1.1;
+  color: var(--ivory-100); text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 18px rgba(0, 0, 0, 0.7);
+  overflow-wrap: anywhere;
+}
+.follower.fresh { animation: fresh 1.6s var(--ease-heavy); }
+@keyframes fresh { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+.chat {
+  position: absolute; right: 64px; bottom: 54px; width: 520px; pointer-events: none;
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+}
+.chat .msg {
+  font-family: var(--font-ui); font-size: 24px; line-height: 1.32; color: #fbf5e8;
+  opacity: 1; text-align: right; overflow-wrap: anywhere;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 1), 0 0 16px rgba(0, 0, 0, 0.8);
+  animation: msgIn 0.9s var(--ease-heavy);
+}
+.chat .msg b { font-weight: 700; margin-right: 8px; }
+.chat .msg.old { opacity: 0.82; }
+@keyframes msgIn { from { opacity: 0; transform: translateY(14px); } }
