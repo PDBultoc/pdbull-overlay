@@ -15,6 +15,11 @@ export function mountWith(layer, { bus, settings }, opts = {}) {
   canvas.style.cssText = `position:absolute;inset:0;width:${W}px;height:${H}px;pointer-events:none`;
   layer.appendChild(canvas);
   const ctx = canvas.getContext('2d');
+  let off = null; // offscreen canvas for the outgoing effect, created lazily once
+  const offCtx = () => {
+    if (!off) { off = opts.makeCanvas ? opts.makeCanvas() : Object.assign(doc.createElement('canvas'), { width: W, height: H }); off.ctx = off.getContext('2d'); }
+    return off.ctx;
+  };
   const makeDom = opts.makeDom || (() => { const d = doc.createElement('div'); d.style.cssText = `position:absolute;left:0;top:0;width:${W}px;height:${H}px;pointer-events:none`; layer.appendChild(d); return d; });
   const cset = () => (settings && settings.get && settings.get().casting) || {};
   let AC = null;
@@ -30,12 +35,23 @@ export function mountWith(layer, { bus, settings }, opts = {}) {
   const publishTally = () => bus.emit('casting-tally', { rows: tally.rows(), awards: tally.awards() });
   function start(r) {
     const dom = makeDom();
+    let api;
+    try {
     const a = audio();
-    const api = { ctx, dom, W, H, player: r.player || NEUTRAL, x: r.x, y: r.y, rand: seeded(hash(r.id)), audio: a,
+    api = { ctx, dom, W, H, player: r.player || NEUTRAL, x: r.x, y: r.y, rand: seeded(hash(r.id)), audio: a,
       tally: tally.rows(), awards: tally.awards(), keepOut: caKeepOut(players),
       ease, PLAY, volume: cset().volume ?? 0.7 };
-    return { r, inst: effects[r.fx](api), dom, t0: now() };
+    return { r, inst: effects[r.fx](api), dom, api, t0: now() };
+    } catch { try { dom.remove && dom.remove(); } catch {} return null; }
   }
+  function cut(e) { // an effect becomes outgoing: draw it on the offscreen canvas, fade its sound
+    e.api.ctx = offCtx(); e.cut = now();
+    try {
+      const m = e.api._master, ac = e.api.audio;
+      if (m && ac) { m.gain.setValueAtTime(m.gain.value, ac.currentTime); m.gain.linearRampToValueAtTime(0, ac.currentTime + FADE); }
+    } catch {}
+  }
+  function draw(e, t, c) { try { c.save(); e.inst.render(t); c.restore(); return true; } catch { try { c.restore(); } catch {} return false; } }
   function end(e) { if (!e) return; try { e.inst.dispose && e.inst.dispose(); } catch {} e.dom.remove && e.dom.remove(); }
   function frame() {
     looping = false; if (dead) return;
@@ -44,12 +60,16 @@ export function mountWith(layer, { bus, settings }, opts = {}) {
     if (outgoing) {
       const k = (tNow - outgoing.cut) / 1000 / FADE;
       if (k >= 1) { end(outgoing); outgoing = null; }
-      else { ctx.save(); ctx.globalAlpha = 1 - k; outgoing.inst.render((tNow - outgoing.t0) / 1000); ctx.restore(); }
+      else {
+        const oc = outgoing.api.ctx; oc.clearRect(0, 0, W, H);
+        if (!draw(outgoing, (tNow - outgoing.t0) / 1000, oc)) { end(outgoing); outgoing = null; }
+        else { ctx.save(); ctx.globalAlpha = 1 - k; ctx.drawImage(off, 0, 0); ctx.restore(); }
+      }
     }
     if (cur) {
       const t = (tNow - cur.t0) / 1000;
       if (t > cur.inst.duration) { end(cur); cur = null; }
-      else { ctx.save(); cur.inst.render(t); ctx.restore(); }
+      else if (!draw(cur, t, ctx)) { end(cur); cur = null; }
     }
     if (cur || outgoing) { looping = true; raf(frame); }
   }
@@ -61,8 +81,9 @@ export function mountWith(layer, { bus, settings }, opts = {}) {
     seen.add(r.id); if (seen.size > 200) seen.delete(seen.values().next().value);
     if (cur && !replaces(cur.r, r)) return;
     if (r.fx !== 'gg') { tally.record(r.fx, r.player); publishTally(); }
-    if (cur) { end(outgoing); outgoing = { ...cur, cut: now() }; }
-    cur = start(r); kick();
+    const next = start(r); if (!next) return; // a failing factory leaves the current effect alone
+    if (cur) { end(outgoing); outgoing = cur; cut(outgoing); }
+    cur = next; kick();
   }
   const offs = [
     bus.on('reaction', fire),

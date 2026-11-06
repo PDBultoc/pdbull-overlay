@@ -115,7 +115,7 @@ function sfx(api) {
   try {
     const t0 = ac.currentTime + 0.03, rate = ac.sampleRate, nb = ac.createBuffer(1, (rate * 1.5) | 0, rate), d = nb.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = api.rand() * 2 - 1;
-    const master = ac.createGain(); master.gain.value = 0.65 * (api.volume ?? 0.7); master.connect(ac.destination);
+    const master = ac.createGain(); master.gain.value = 0.65 * (api.volume ?? 0.7); master.connect(ac.destination); api._master = master;
     const env = (g, at, dur, peak, atk) => {
       g.gain.setValueAtTime(0.0001, t0 + at); g.gain.linearRampToValueAtTime(peak, t0 + at + atk);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + dur);
@@ -344,7 +344,7 @@ function wow(api) {
   const wL = mw(api, T('L', LF, GD), 0), wR = mw(api, T('egendary', RF, IV), 8), total = wL + 6 + wR;
   const cx = clamp(x, 60 + total / 2 + 30, 1860 - total / 2 - 30), left = cx - total / 2, rx0 = left + wL + 6 - 2;
   const LH = 165;
-  const wash = mkWash(rand, cx, yb - 20, total + 460, 380, 11);
+  const wash = mkWash(rand, cx, yb - 20, total + 460, 380, 11), washLayer = mkLayer();
   // sample the capital L into dust targets
   const off = document.createElement('canvas'); off.width = 360; off.height = 320;
   const o = off.getContext('2d'); o.font = LF; o.textBaseline = 'alphabetic'; o.fillStyle = '#fff'; o.fillText('L', 30, 270);
@@ -388,7 +388,7 @@ function wow(api) {
   };
   return { duration: dur, render(t) {
     const c = begin(api), fo = fade(t, dur, 0.5), e = api.ease;
-    drawWash(c, wash, e.out(win(t, 0.3, 1.1)), fo);
+    dimDraw(c, washLayer, (lc) => drawWash(lc, wash, e.out(win(t, 0.3, 1.1)), fo), api.keepOut);
     // short amber flare at the burst
     const k0 = win(t, 0, 0.55);
     if (k0 > 0 && k0 < 1) glow(c, x, y, 60 + 200 * e.out(k0), [[0, `rgba(255,240,200,${(0.85 * (1 - k0)).toFixed(3)})`], [0.4, `rgba(255,179,71,${(0.6 * (1 - k0)).toFixed(3)})`], [1, 'rgba(255,179,71,0)']]);
@@ -430,7 +430,7 @@ function wololo(api) {
   for (let i = 0; i < 12; i++) { const a = rand() * 6.2832, d = rand() * R * 0.3; blobs.push({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.8, r: R * (0.5 + rand() * 0.45), d0: rand() * 0.35 }); }
   for (let i = 0; i < 20; i++) { const a = rand() * 6.2832; sats.push({ x: x + Math.cos(a) * R * (0.65 + rand() * 0.3), y: y + Math.sin(a) * R * (0.55 + rand() * 0.3), r: R * (0.12 + rand() * 0.16), d0: 0.25 + rand() * 0.4 }); }
   for (let i = 0; i < 170; i++) { const a = rand() * 6.2832, d = Math.sqrt(rand()) * R * 1.05; gran.push({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.85, r: 0.8 + rand() * 1.8, a: 0.25 + rand() * 0.4, dk: rand() < 0.6, d: d / R }); }
-  const wash = mkWash(rand, cx, cy - 30, 900, 280, 8);
+  const wash = mkWash(rand, cx, cy - 30, 900, 280, 8), washLayer = mkLayer();
   const S = sfx(api);
   if (S) {
     S.noise(0, 1.6, { type: 'lowpass', f0: 240, f1: 1100, q: 1.5, g: 0.2, atk: 0.8 });
@@ -449,7 +449,7 @@ function wololo(api) {
     for (const s of sats) drawBlob(s, e.out(win(t, s.d0, s.d0 + 1.0)), 1);
     const bloom = e.out(win(t, 0, 1.5)) * 1.1;
     for (const g of gran) { if (g.d > bloom) continue; c.fillStyle = g.dk ? rgba(rim, g.a * fo) : rgba('#f4ecdc', g.a * 0.5 * fo); c.fillRect(g.x, g.y, g.r * 1.4, g.r); }
-    drawWash(c, wash, e.out(win(t, 0.4, 1.1)), fo);
+    dimDraw(c, washLayer, (lc) => drawWash(lc, wash, e.out(win(t, 0.4, 1.1)), fo), api.keepOut);
     rich(c, T('Wololo.', `italic 600 170px ${FS}`, IV), cx, cy + 40, { ls: 3, a: fo, p: e.out(win(t, 0.7, 1.4)), blur: 22 });
   } };
 }
