@@ -79,3 +79,9 @@ test('custom key is respected', () => {
   createSettings(st, 'k2').set('glass', 0.2);
   assert.equal(JSON.parse(st.getItem('k2')).glass, 0.2);
 });
+
+test('casting defaults', () => {
+  const s = createSettings(mem());
+  assert.deepEqual(s.get().casting, { followProfileId: null, followName: '', manual: '', sound: true, volume: 0.7 });
+  assert.equal(s.get().modules.reactions.enabled, true);
+});

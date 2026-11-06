@@ -1,5 +1,6 @@
 /* Alerts module: every rule scoped under [data-mod=alerts]. Layer = 1920x1080; the band is x 625-1675, y 40-680. */
 [data-mod=alerts] .band { position: absolute; left: 625px; top: 40px; width: 1050px; height: 640px; pointer-events: none; }
+body.scene-casting [data-mod=alerts] .band { top: 150px; }
 [data-mod=alerts] .fill { position: absolute; inset: 0; opacity: 0; filter: drop-shadow(0 14px 14px rgba(0, 0, 0, 0.5)); }
 [data-mod=alerts] .txt { position: absolute; inset: 0; }
 [data-mod=alerts] .txt > * { position: absolute; }

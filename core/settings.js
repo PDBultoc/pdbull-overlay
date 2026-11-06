@@ -4,7 +4,9 @@ export const DEFAULTS = {
   scenes: { countdownEnd: null, countdownMin: 5, brbText: 'Be right back' },
   latest: { follower: '', subscriber: '', donation: '' },
   ambience: { enabled: true, volume: 0.6 },
+  casting: { followProfileId: null, followName: '', manual: '', sound: true, volume: 0.7 },
   modules: {
+    reactions: { enabled: true },
     matchbar: { enabled: true },
     camchat: { enabled: true, channel: 'pdbull', lines: 7 },
     intro: { enabled: true, minSeconds: 6 },

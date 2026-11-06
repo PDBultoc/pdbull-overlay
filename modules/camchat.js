@@ -1,5 +1,6 @@
 import { connect } from '../core/twitchchat.js';
 import { chatBottom, playerCount, emoteParts } from '../core/camchatlogic.js';
+import { castingChatBottom } from '../core/reactionlogic.js';
 
 const NAME_DARK = ['#d4a28f', '#a9bf98', '#d8c28f', '#9fb4cc', '#c9a0b4', '#b7a58a', '#c58d6d', '#93b8b0'];
 const LIFE = 40000;
@@ -40,7 +41,7 @@ export function mount(root, ctx = {}) {
   chat.className = 'chat';
   root.appendChild(chat);
 
-  const setBottom = (n) => root.style.setProperty('--chat-bottom', chatBottom(n) + 'px');
+  const setBottom = (n) => root.style.setProperty('--chat-bottom', (document.body?.classList.contains('scene-casting') ? castingChatBottom(n) : chatBottom(n)) + 'px');
   const fromMatch = (m) => setBottom(ctx.playersOverride || playerCount(m && m.running !== false ? m : null));
   fromMatch(ctx.latest ? ctx.latest() : null);
 
