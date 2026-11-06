@@ -1,0 +1,93 @@
+// Watches AoE2 DE's savegame folder. When a replay starts being written (a game played or spectated),
+// it reads the players from the header and sends one replay-match event to the overlay room.
+// node tools/replay-watch.mjs [--once] [--dry] [--dir <savegame folder>]
+//   config: %APPDATA%\pdbull-overlay\replay-watch.json  { "room": "...", "dir": "optional" }
+//   log:    %LOCALAPPDATA%\pdbull-overlay\replay-watch.log
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import { inflateHead, playersFromHeader, replayMatch, HEAD_BYTES } from '../core/recheader.js';
+import { pickLive, nextStep, roomEvent, MAX_TRIES } from '../core/replaywatch.js';
+import { topicFor } from '../core/remote.js';
+
+const args = process.argv.slice(2);
+const flag = (n) => args.includes(n);
+const opt = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
+const once = flag('--once'), dry = flag('--dry');
+const APPDATA = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+const LOCAL = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+const CONFIG = path.join(APPDATA, 'pdbull-overlay', 'replay-watch.json');
+const LOGDIR = path.join(LOCAL, 'pdbull-overlay');
+const LOG = path.join(LOGDIR, 'replay-watch.log');
+const PID = path.join(LOGDIR, 'replay-watch.pid');
+const TICK_MS = 5000;
+
+fs.mkdirSync(LOGDIR, { recursive: true });
+function log(msg) {
+  try {
+    if (fs.existsSync(LOG) && fs.statSync(LOG).size > 262144) fs.renameSync(LOG, LOG + '.1');
+    fs.appendFileSync(LOG, `${new Date().toISOString()} ${msg}\n`);
+  } catch { /* logging must never stop the watcher */ }
+}
+function findSavegameDir() {
+  const base = path.join(os.homedir(), 'Games', 'Age of Empires 2 DE');
+  const ids = fs.existsSync(base) ? fs.readdirSync(base).filter((d) => /^\d+$/.test(d)) : [];
+  for (const id of ids) { const d = path.join(base, id, 'savegame'); if (fs.existsSync(d)) return d; }
+  return null;
+}
+
+let cfg = {};
+try { cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8')); } catch { /* no config yet */ }
+const dir = opt('--dir') || cfg.dir || findSavegameDir();
+if (!dir) { log('no savegame folder found'); process.exit(1); }
+if (!dry && !cfg.room) { log(`no room in ${CONFIG}`); process.exit(1); }
+
+if (!once) { // one watcher per user: a second start (logon + manual) exits quietly
+  try {
+    const old = Number(fs.readFileSync(PID, 'utf8'));
+    if (old && old !== process.pid) { process.kill(old, 0); log(`already running (pid ${old})`); process.exit(0); }
+  } catch { /* no pid file, or that process is gone */ }
+  fs.writeFileSync(PID, String(process.pid));
+}
+
+const state = { announced: null, tries: new Map() };
+let pausedUntil = 0, busy = false;
+
+function readHead(file) { // plain read, so a file the game is still writing is fine
+  const fd = fs.openSync(file, 'r');
+  try { const buf = Buffer.alloc(HEAD_BYTES); const n = fs.readSync(fd, buf, 0, HEAD_BYTES, 0); return new Blob([buf.subarray(0, n)]); }
+  finally { fs.closeSync(fd); }
+}
+
+async function tick() {
+  if (busy) return; busy = true;
+  try {
+    let files;
+    try {
+      files = fs.readdirSync(dir).filter((n) => /\.aoe2record$/i.test(n))
+        .map((name) => ({ name, mtimeMs: fs.statSync(path.join(dir, name)).mtimeMs }));
+    } catch (e) { log('list failed: ' + e.message); return; }
+    const live = pickLive(files, Date.now());
+    if (nextStep(state, live) !== 'read') return;
+    let players = [];
+    try { const h = await inflateHead(readHead(path.join(dir, live.name))); players = h ? playersFromHeader(h) : []; }
+    catch (e) { log(`read failed ${live.name}: ${e.message}`); }
+    if (!players.length) {
+      const n = (state.tries.get(live.name) || 0) + 1; state.tries.set(live.name, n);
+      if (n >= MAX_TRIES) log(`skipped ${live.name}: no players after ${n} reads`);
+      return;
+    }
+    const body = roomEvent(replayMatch(live.name, players), Date.now());
+    if (dry) { process.stdout.write(JSON.stringify(body) + '\n'); state.announced = live.name; return; }
+    if (Date.now() < pausedUntil) return;
+    try {
+      const r = await fetch('https://ntfy.sh/' + topicFor(cfg.room), { method: 'POST', body: JSON.stringify(body) });
+      if (r.ok) { state.announced = live.name; log(`sent ${live.name}: ${players.map((p) => p.name).join(', ')}`); }
+      else { if (r.status === 429) pausedUntil = Date.now() + 60000; log(`send failed: http ${r.status}`); }
+    } catch (e) { log('send failed: ' + e.message); }
+  } finally { busy = false; }
+}
+
+log(`start pid=${process.pid} dir=${dir}${dry ? ' (dry)' : ''}${once ? ' (once)' : ''}`);
+await tick();
+if (!once) setInterval(() => { tick().catch((e) => log('tick: ' + e.message)); }, TICK_MS);
