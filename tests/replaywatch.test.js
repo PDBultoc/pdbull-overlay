@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { pickLive, nextStep, roomEvent, LIVE_MS, MAX_TRIES } from '../core/replaywatch.js';
+import { pickLive, nextStep, roomEvent, lockIsStale, LIVE_MS, LOCK_STALE_MS, MAX_TRIES } from '../core/replaywatch.js';
 import { startupVbs } from '../tools/replay-watch-install.mjs';
 
 const WATCH = fileURLToPath(new URL('../tools/replay-watch.mjs', import.meta.url));
@@ -26,6 +26,15 @@ test('nextStep: read a new live file; idle when none, already announced, or afte
   assert.equal(nextStep(s, { name: 'x' }), 'read');
   s.tries.set('x', MAX_TRIES); assert.equal(nextStep(s, { name: 'x' }), 'idle');
   s.announced = 'y'; assert.equal(nextStep(s, { name: 'y' }), 'idle');
+});
+test('lockIsStale: junk, old heartbeat or dead pid is stale; a fresh live lock is not', () => {
+  const now = 1e12, alive = () => true, dead = () => false;
+  const fresh = JSON.stringify({ pid: 42, t: now - 1000 });
+  assert.equal(lockIsStale('not json', now, alive), true);
+  assert.equal(lockIsStale('{"pid":"x","t":1}', now, alive), true);
+  assert.equal(lockIsStale(fresh, now, alive), false);
+  assert.equal(lockIsStale(JSON.stringify({ pid: 42, t: now - LOCK_STALE_MS - 1 }), now, alive), true);
+  assert.equal(lockIsStale(fresh, now, dead), true);
 });
 test('roomEvent has the publishEvent body shape', () => {
   assert.deepEqual(roomEvent({ id: 'x' }, 5), { kind: 'event', type: 'replay-match', payload: { id: 'x' }, t: 5 });

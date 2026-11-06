@@ -1,5 +1,7 @@
 // Starts the replay watcher at logon from the user's Startup folder (no admin rights, no window).
-// node tools/replay-watch-install.mjs --room <code>   writes the config, the Startup .vbs, and starts it once
+// set PDBULL_ROOM=<room code from the overlay URL>, then: node tools/replay-watch-install.mjs
+//   writes the config, the Startup .vbs, and starts the watcher once (the room is read from the environment,
+//   never from a command-line argument, so it does not show in process lists)
 // node tools/replay-watch-install.mjs --uninstall     removes the Startup .vbs (the config stays)
 import fs from 'node:fs';
 import path from 'node:path';
@@ -24,10 +26,13 @@ if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
   const args = process.argv.slice(2);
   if (args.includes('--uninstall')) {
     fs.rmSync(VBS, { force: true });
-    console.log('removed ' + VBS + ' (a running watcher stops at logoff, or: taskkill /PID <pid in %LOCALAPPDATA%\\pdbull-overlay\\replay-watch.pid> /T /F)');
+    console.log('removed ' + VBS + ' (a running watcher stops at logoff, or: taskkill /PID <"pid" field of %LOCALAPPDATA%\\pdbull-overlay\\replay-watch.pid> /T /F)');
   } else {
-    const i = args.indexOf('--room'); const room = i >= 0 ? args[i + 1] : '';
-    if (!/^[a-z0-9]{8,64}$/.test(room || '')) { console.error('usage: --room <room code from the overlay URL>'); process.exit(2); }
+    const room = process.env.PDBULL_ROOM || '';
+    if (!/^[a-z0-9]{8,64}$/.test(room)) {
+      console.error('usage: set PDBULL_ROOM=<room code from the overlay URL>, then run node tools/replay-watch-install.mjs');
+      process.exit(2);
+    }
     fs.mkdirSync(path.dirname(CONFIG), { recursive: true });
     let cfg = {}; try { cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8')); } catch { /* new */ }
     fs.writeFileSync(CONFIG, JSON.stringify({ ...cfg, room }, null, 2));

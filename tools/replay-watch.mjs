@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { inflateHead, playersFromHeader, replayMatch, HEAD_BYTES } from '../core/recheader.js';
-import { pickLive, nextStep, roomEvent, MAX_TRIES } from '../core/replaywatch.js';
+import { pickLive, nextStep, roomEvent, lockIsStale, MAX_TRIES } from '../core/replaywatch.js';
 import { topicFor } from '../core/remote.js';
 
 const args = process.argv.slice(2);
@@ -21,6 +21,7 @@ const LOGDIR = path.join(LOCAL, 'pdbull-overlay');
 const LOG = path.join(LOGDIR, 'replay-watch.log');
 const PID = path.join(LOGDIR, 'replay-watch.pid');
 const TICK_MS = 5000;
+const ROOM_RE = /^[a-z0-9]{8,64}$/;
 
 fs.mkdirSync(LOGDIR, { recursive: true });
 function log(msg) {
@@ -41,13 +42,18 @@ try { cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8')); } catch { /* no config 
 const dir = opt('--dir') || cfg.dir || findSavegameDir();
 if (!dir) { log('no savegame folder found'); process.exit(1); }
 if (!dry && !cfg.room) { log(`no room in ${CONFIG}`); process.exit(1); }
+if (!dry && !ROOM_RE.test(cfg.room)) { log('room in config is invalid'); process.exit(1); }
 
+const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+const writeLock = () => fs.writeFileSync(PID, JSON.stringify({ pid: process.pid, t: Date.now() }));
 if (!once) { // one watcher per user: a second start (logon + manual) exits quietly
-  try {
-    const old = Number(fs.readFileSync(PID, 'utf8'));
-    if (old && old !== process.pid) { process.kill(old, 0); log(`already running (pid ${old})`); process.exit(0); }
-  } catch { /* no pid file, or that process is gone */ }
-  fs.writeFileSync(PID, String(process.pid));
+  let text = ''; try { text = fs.readFileSync(PID, 'utf8'); } catch { /* no pid file */ }
+  const lock = (() => { try { return JSON.parse(text); } catch { return null; } })();
+  if (!lockIsStale(text, Date.now(), alive) && lock.pid !== process.pid) { log(`already running (pid ${lock.pid})`); process.exit(0); }
+  writeLock();
+  process.on('exit', () => { // leave no stale lock behind: remove it only if it still holds our pid
+    try { const cur = JSON.parse(fs.readFileSync(PID, 'utf8')); if (cur.pid === process.pid) fs.rmSync(PID, { force: true }); } catch { /* none */ }
+  });
 }
 
 const state = { announced: null, tries: new Map() };
@@ -62,6 +68,7 @@ function readHead(file) { // plain read, so a file the game is still writing is 
 async function tick() {
   if (busy) return; busy = true;
   try {
+    if (!once) writeLock(); // heartbeat: a fresh t tells a second start this watcher is alive
     let files;
     try {
       files = fs.readdirSync(dir).filter((n) => /\.aoe2record$/i.test(n))
@@ -81,7 +88,7 @@ async function tick() {
     if (dry) { process.stdout.write(JSON.stringify(body) + '\n'); state.announced = live.name; return; }
     if (Date.now() < pausedUntil) return;
     try {
-      const r = await fetch('https://ntfy.sh/' + topicFor(cfg.room), { method: 'POST', body: JSON.stringify(body) });
+      const r = await fetch('https://ntfy.sh/' + topicFor(cfg.room), { method: 'POST', body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
       if (r.ok) { state.announced = live.name; log(`sent ${live.name}: ${players.map((p) => p.name).join(', ')}`); }
       else { if (r.status === 429) pausedUntil = Date.now() + 60000; log(`send failed: http ${r.status}`); }
     } catch (e) { log('send failed: ' + e.message); }
@@ -89,5 +96,5 @@ async function tick() {
 }
 
 log(`start pid=${process.pid} dir=${dir}${dry ? ' (dry)' : ''}${once ? ' (once)' : ''}`);
-await tick();
+await tick().catch((e) => log('tick: ' + e.message));
 if (!once) setInterval(() => { tick().catch((e) => log('tick: ' + e.message)); }, TICK_MS);
