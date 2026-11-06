@@ -129,3 +129,9 @@ test('casting link and local-only casting events', async () => {
   await send('casting-tally', {}); await send('casting-match', {}); await send('reaction', {});
   assert.deepEqual(sent, ['bus:casting-tally', 'bus:casting-match', 'bus:reaction', 'room:reaction']);
 });
+
+test('the dock scrolls: panel.css undoes the overlay-wide overflow:hidden from tokens.css', () => {
+  const css = readFileSync(new URL('../panel.css', import.meta.url), 'utf8');
+  assert.match(css, /html\s*\{[^}]*overflow-y:\s*auto/);
+  assert.match(css, /html,\s*body\s*\{[^}]*height:\s*auto/);
+});

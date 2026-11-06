@@ -1,7 +1,8 @@
 /* Dock panel: walnut + brass tokens from shared/tokens.css (no new design). */
 :root { --bad: #d9674a; --ok: #9bc26a; }
 * { box-sizing: border-box; }
-html, body { margin: 0; background: var(--walnut-950); color: var(--text-light); font: 13px/1.35 var(--font-ui); }
+html, body { margin: 0; background: var(--walnut-950); color: var(--text-light); font: 13px/1.35 var(--font-ui); height: auto; overflow: visible; }
+html { overflow-y: auto; } /* tokens.css hides overflow for the overlays; the dock must scroll */
 body { padding: 8px; min-width: 280px; }
 h1 { font: 600 15px var(--font-title); margin: 0 0 6px; color: var(--brass-300); letter-spacing: .08em; text-transform: uppercase; }
 .top { position: sticky; top: 0; z-index: 2; background: var(--walnut-950); padding-bottom: 8px; border-bottom: 1px solid var(--brass-600); margin-bottom: 8px; }
@@ -9,8 +10,9 @@ h1 { font: 600 15px var(--font-title); margin: 0 0 6px; color: var(--brass-300);
 .row > label, .lbl { flex: 0 0 38%; color: var(--text-dim); }
 .row > input[type=text], .row > input[type=number], .row > input[type=password], .row > input[type=url] { flex: 1; min-width: 0; }
 code { color: var(--brass-300); font-size: 12px; overflow-wrap: anywhere; }
-input, button { font: inherit; color: var(--text-light); background: var(--ebony-800); border: 1px solid var(--brass-700); border-radius: 4px; padding: 5px 7px; }
-input:focus, button:focus-visible { outline: 2px solid var(--flame); outline-offset: 1px; }
+input, button, textarea { font: inherit; color: var(--text-light); background: var(--ebony-800); border: 1px solid var(--brass-700); border-radius: 4px; padding: 5px 7px; }
+input:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--flame); outline-offset: 1px; }
+textarea { display: block; width: 100%; box-sizing: border-box; resize: vertical; margin: 4px 0; }
 button { cursor: pointer; background: var(--walnut-800); }
 button:hover { border-color: var(--brass-400); }
 button.pri { background: var(--brass-400); color: var(--ink-on-brass); font-weight: 600; border-color: var(--brass-300); }
