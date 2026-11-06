@@ -30,6 +30,7 @@ export function mountWith(layer, { bus, settings }, opts = {}) {
   });
   const tally = createTally();
   const seen = new Set();
+  const seenReset = new Set();
   let cur = null, outgoing = null, looping = false, dead = false, players = 2;
 
   const publishTally = () => bus.emit('casting-tally', { rows: tally.rows(), awards: tally.awards() });
@@ -94,25 +95,43 @@ export function mountWith(layer, { bus, settings }, opts = {}) {
     bus.on('reaction', fire),
     bus.on('match-running', (p) => {
       const m = p && p.match; if (!m) return;
+      if (typeof m.id === 'string' && m.id.startsWith('test-')) return; // the dock's banner test buttons
       const n = (m.myTeam || []).length + (m.enemies || []).reduce((a, t) => a + t.length, 0);
       players = n || 2;
       tally.forMatch(m.id); publishTally();
       bus.emit('casting-match', { matchId: m.id, map: m.map || '', teams: playersFromMatch(m) });
     }),
-    bus.on('casting-reset', () => { tally.reset(); publishTally(); }),
+    bus.on('casting-reset', (p) => { // arrives locally and again via the room: the second copy must not wipe later reactions
+      const id = p && p.id;
+      if (id != null) { if (seenReset.has(id)) return; seenReset.add(id); if (seenReset.size > 50) seenReset.delete(seenReset.values().next().value); }
+      tally.reset(); publishTally();
+    }),
   ];
   return {
     unmount() { dead = true; offs.forEach((f) => f && f()); end(cur); end(outgoing); canvas.remove && canvas.remove(); if (AC) AC.close().catch(() => {}); },
+    busy: () => !!(cur || outgoing),
     debug: { fire, activeFx: () => (cur ? cur.r.fx : null), tally },
   };
 }
 function hash(s) { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; }
+// every face reactions-fx.js draws on canvas (weight/style/family); kept in step with it by a test
+export const FONT_FACES = [
+  '600 64px Cinzel', '900 64px Cinzel',
+  'italic 600 64px "Cormorant Garamond"', 'italic 700 64px "Cormorant Garamond"',
+];
+function ensureCss(layer) {
+  const doc = layer.ownerDocument || globalThis.document;
+  if (!doc || !doc.head || doc.getElementById('reactions-css')) return;
+  const l = doc.createElement('link');
+  l.id = 'reactions-css'; l.rel = 'stylesheet'; l.href = new URL('./reactions.css', import.meta.url).href;
+  doc.head.appendChild(l);
+}
 export function mount(layer, deps) {
   // the effects draw canvas text in these faces; warm them up once (fire-and-forget)
+  ensureCss(layer);
   try {
     if (typeof document !== 'undefined' && document.fonts && document.fonts.load) {
-      document.fonts.load('600 64px Cinzel').catch(() => {});
-      document.fonts.load('italic 500 40px "Cormorant Garamond"').catch(() => {});
+      for (const f of FONT_FACES) document.fonts.load(f).catch(() => {});
     }
   } catch {}
   return mountWith(layer, deps);

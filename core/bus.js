@@ -77,5 +77,8 @@ export function createBus({
     return () => { handlers.get(type)?.delete(fn); };
   }
 
-  return { emit, on };
+  // Poller-originated events stay inside their own page: no channel post, no storage write.
+  const emitLocal = (type, payload) => dispatch(type, payload);
+
+  return { emit, emitLocal, on };
 }

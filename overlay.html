@@ -98,12 +98,12 @@ function makePoller(id) {
   const p = createPoller({
     profileId: id,
     intervalSec: settings.get().pollSec || 20,
-    onEvents: (evs) => { if (p === poller) for (const e of evs) bus.emit(e.type, { match: e.match }); },
+    onEvents: (evs) => { if (p === poller) for (const e of evs) bus.emitLocal(e.type, { match: e.match }); },
     onStatus: (st) => {
       if (p !== poller) return; // a stopped poller's late reply must not report
       reportStatus(st);
       // deferred: the poller reports status BEFORE its events, and the banner must see match-start (intro wait) first
-      if (st && st.ok) queueMicrotask(() => bus.emit('match-running', { match: poller.latest() }));
+      if (st && st.ok) queueMicrotask(() => bus.emitLocal('match-running', { match: poller.latest() }));
     },
   });
   return p;
@@ -193,7 +193,8 @@ sync();
 bus.emit('settings-request', {});
 remote.start();
 poller.start();
-startAutoUpdate();
+// a reload during a cast would lose the tally: wait while a reaction is playing
+startAutoUpdate({ canReload: () => { const h = live.get('reactions'); return !(h && h.handle && h.handle.busy && h.handle.busy()); } });
 </script>
 </body>
 </html>

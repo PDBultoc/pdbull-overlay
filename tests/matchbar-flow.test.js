@@ -44,7 +44,7 @@ function wire() {
 
 test("overlay.html defers match-running past the same-tick events", () => {
   const src = fs.readFileSync(new URL("../overlay.html", import.meta.url), "utf8");
-  assert.match(src, /queueMicrotask\(\(\) => bus\.emit\('match-running'/);
+  assert.match(src, /queueMicrotask\(\(\) => bus\.emitLocal\('match-running'/);
 });
 
 test("new ranked start: banner waits for intro-end, not shown at once", async () => {

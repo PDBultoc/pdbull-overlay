@@ -180,16 +180,21 @@ function boot() {
   const followed = el('div', { class: 'dim' });
   const showFollowed = () => { followed.textContent = getp('casting.followProfileId') ? `Following ${getp('casting.followName')} (${getp('casting.followProfileId')})` : 'Following: my own games'; };
   refreshers.push(showFollowed); showFollowed();
+  let searchSeq = 0;
   search.addEventListener('change', async () => {
+    const qs = search.value.trim(); if (!qs) { results.replaceChildren(); return; }
+    const my = ++searchSeq;
     results.textContent = '…';
-    try { const j = await (await fetch(searchUrl(search.value.trim()))).json();
+    try { const j = await (await fetch(searchUrl(qs))).json();
+      if (my !== searchSeq) return; // a newer search is in flight
       results.replaceChildren(...searchEntries(j).map((p) => el('button', { type: 'button', text: `${p.name} · ${p.country} · ${p.games} games`,
         onclick: () => { write('casting.followProfileId', p.profileId); write('casting.followName', p.name); results.replaceChildren(); showFollowed(); } })));
-    } catch { results.textContent = 'Search failed — try again'; }
+    } catch { if (my === searchSeq) results.textContent = 'Search failed — try again'; }
   });
   // Manual fallback: used only while the overlay has sent no casting-match with players.
   const manual = el('textarea', { rows: '3', placeholder: 'Manual players, one per line: Name #rrggbb' });
   manual.value = getp('casting.manual') || '';
+  refreshers.push(() => { const v = getp('casting.manual') || ''; if (manual.value !== v) manual.value = v; });
   manual.addEventListener('change', () => { write('casting.manual', manual.value); if (!castLive) { castTeams = parseManual(manual.value); drawPlayers(); } });
   let castLive = false;
   bus.on('casting-match', (m) => { castLive = !!(m && m.teams && m.teams.length); if (!castLive) { castTeams = parseManual(manual.value); drawPlayers(); } });
@@ -200,7 +205,7 @@ function boot() {
     playersBox, fxBtns, pad,
     el('div', { class: 'btns' }, [el('button', { type: 'button', text: 'Centre', onclick: () => { castPoint = clampPoint(NaN, NaN); placeDot(); } })]),
     tallyBox,
-    el('div', { class: 'btns' }, [el('button', { type: 'button', class: 'dng', text: 'Reset tally', onclick: () => send('casting-reset', {}) })]),
+    el('div', { class: 'btns' }, [el('button', { type: 'button', class: 'dng', text: 'Reset tally', onclick: () => send('casting-reset', { id: 'reset-' + Date.now().toString(36) }) })]),
     check('Sound', 'casting.sound'), field('Volume', 'casting.volume', 'range', { min: '0', max: '1', step: '0.05' }),
   ]);
   castingCard.tabIndex = 0;

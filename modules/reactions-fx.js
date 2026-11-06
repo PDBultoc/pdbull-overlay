@@ -99,11 +99,12 @@ export function punch(lc, ko, offX = PLAY.x, offY = PLAY.y) {
     for (let d = 5; d <= 30; d += 5) lc.fillRect(ox - d, oy - d, ko.w + 2 * d, ko.h + 2 * d);
   } finally { lc.restore(); }
 }
+const CAM_KO = { x: 0, y: 745, w: 340, h: 105 }; // Paul's cam (OBS source under the overlay) must not be darkened
 function dimDraw(c, layer, fn, keepOut) {
   const lc = layer.getContext('2d');
   lc.setTransform(1, 0, 0, 1, 0, 0); lc.globalCompositeOperation = 'source-over'; lc.clearRect(0, 0, PLAY.w, PLAY.h);
   lc.translate(0, -PLAY.y); fn(lc); lc.setTransform(1, 0, 0, 1, 0, 0);
-  punch(lc, keepOut);
+  punch(lc, keepOut); punch(lc, CAM_KO);
   lc.globalCompositeOperation = 'destination-in';
   const g = lc.createLinearGradient(0, 0, 0, PLAY.h), f = 40 / PLAY.h;
   g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(f, '#000'); g.addColorStop(1 - f, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)');

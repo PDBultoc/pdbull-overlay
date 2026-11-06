@@ -102,3 +102,19 @@ test('handler exception does not stop other handlers', () => {
   assert.doesNotThrow(() => bus.emit('x', 1));
   assert.deepEqual(got, [1]);
 });
+
+test('emitLocal reaches this page only: no channel post, no storage write', () => {
+  const posted = [], writes = [];
+  class SpyBC { postMessage(d) { posted.push(d); } }
+  const win = Object.assign(fakeWin(), { localStorage: { setItem: (k, v) => writes.push([k, v]) } });
+  const bus = createBus({ BC: SpyBC, win });
+  const got = [];
+  bus.on('match-start', (p) => got.push(p));
+  bus.emitLocal('match-start', { a: 1 });
+  assert.deepEqual(got, [{ a: 1 }]);
+  assert.equal(posted.length, 0);
+  assert.equal(writes.length, 0);
+  bus.emit('match-start', { a: 2 });
+  assert.equal(posted.length, 1);
+  assert.equal(writes.length, 1);
+});

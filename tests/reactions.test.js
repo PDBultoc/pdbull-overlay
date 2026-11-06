@@ -137,3 +137,44 @@ test('a throwing factory leaks nothing and keeps the current effect; a throwing 
   assert.ok(r.log.some((l) => l[0] === 'wow' && l[1] === 'end'));
   assert.equal(r.frames.length, 0);
 });
+
+test('casting-reset with a seen id is ignored (the room copy must not wipe later reactions)', () => {
+  const r = rig();
+  r.bus.emit('reaction', { fx: 'blunder', player: { name: 'A', color: '#111111' }, id: 'b1' });
+  r.bus.emit('casting-reset', { id: 'reset-1' });
+  r.bus.emit('reaction', { fx: 'blunder', player: { name: 'A', color: '#111111' }, id: 'b2' });
+  r.bus.emit('casting-reset', { id: 'reset-1' });
+  assert.equal(r.bus.out.filter(([t]) => t === 'casting-tally').pop()[1].rows[0].blunders, 1);
+  r.bus.emit('casting-reset', { id: 'reset-2' });
+  assert.equal(r.bus.out.filter(([t]) => t === 'casting-tally').pop()[1].rows.length, 0);
+});
+test('match-running with a test- match id changes nothing', () => {
+  const r = rig();
+  r.bus.emit('match-running', { match: { id: 'm1', myTeam: [{ name: 'A' }], enemies: [] } });
+  r.bus.emit('reaction', { fx: 'blunder', player: { name: 'A', color: '#111111' }, id: 'b1' });
+  const n = r.bus.out.length;
+  r.bus.emit('match-running', { match: { id: 'test-banner-1v1', myTeam: [{ name: 'Z' }], enemies: [] } });
+  assert.equal(r.bus.out.length, n + 1); // only the test event itself, no tally / casting-match
+  assert.equal(r.bus.out.filter(([t]) => t === 'casting-tally').pop()[1].rows[0].blunders, 1);
+});
+test('busy() is true while a reaction plays', () => {
+  const r = rig();
+  assert.equal(r.h.busy(), false);
+  r.bus.emit('reaction', { fx: 'wow', id: 'x1' });
+  assert.equal(r.h.busy(), true);
+  r.step(500); r.step(600); r.step(16);
+  assert.equal(r.h.busy(), false);
+});
+test('every font face reactions-fx.js draws is warmed up and imported by tokens.css', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { FONT_FACES } = await import('../modules/reactions.js');
+  const src = readFileSync(new URL('../modules/reactions-fx.js', import.meta.url), 'utf8');
+  const used = new Set([...src.matchAll(/(italic )?(\d{3}) \d+px \$\{(FT|FS)\}/g)].map((m) => `${m[1] ? 'italic ' : ''}${m[2]} ${m[3] === 'FT' ? 'Cinzel' : 'Cormorant Garamond'}`));
+  const warmed = new Set(FONT_FACES.map((f) => f.replace(/ \d+px /, ' ').replace(/"/g, '')));
+  for (const u of used) assert.ok(warmed.has(u), 'not warmed: ' + u);
+  assert.equal(warmed.size, used.size);
+  const css = readFileSync(new URL('../shared/tokens.css', import.meta.url), 'utf8');
+  assert.match(css, /Cinzel:wght@[^&"]*900/);
+  assert.match(css, /Cormorant\+Garamond:[^"]*1,600/);
+  assert.match(css, /Cormorant\+Garamond:[^"]*1,700/);
+});
