@@ -4,7 +4,7 @@ export const DEFAULTS = {
   scenes: { countdownEnd: null, countdownMin: 5, brbText: 'Be right back' },
   latest: { follower: '', subscriber: '', donation: '' },
   ambience: { enabled: true, volume: 0.6 },
-  casting: { followProfileId: null, followName: '', manual: '', sound: true, volume: 0.7 },
+  casting: { followProfileId: null, followName: '', manual: '', sound: true, volume: 0.7, auto: true },
   modules: {
     reactions: { enabled: true },
     matchbar: { enabled: true },

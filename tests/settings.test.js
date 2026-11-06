@@ -82,6 +82,6 @@ test('custom key is respected', () => {
 
 test('casting defaults', () => {
   const s = createSettings(mem());
-  assert.deepEqual(s.get().casting, { followProfileId: null, followName: '', manual: '', sound: true, volume: 0.7 });
+  assert.deepEqual(s.get().casting, { followProfileId: null, followName: '', manual: '', sound: true, volume: 0.7, auto: true });
   assert.equal(s.get().modules.reactions.enabled, true);
 });

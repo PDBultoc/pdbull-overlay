@@ -32,6 +32,13 @@ export function mountWith(layer, { bus, settings }, opts = {}) {
   const seen = new Set();
   const seenReset = new Set();
   let cur = null, outgoing = null, looping = false, dead = false, players = 2;
+  let pinned = null; // the replay-detected match (watcher or dock "Load replay…"); shown while casting.auto is on
+  const auto = () => cset().auto !== false;
+  function showPinned() {
+    players = pinned.teams.reduce((a, t) => a + ((t && t.players) || []).length, 0) || 2;
+    tally.forMatch(pinned.id); publishTally();
+    bus.emit('casting-match', { matchId: pinned.id, map: '', teams: pinned.teams, source: 'replay', startedAt: pinned.startedAt || null });
+  }
 
   const publishTally = () => bus.emit('casting-tally', { rows: tally.rows(), awards: tally.awards() });
   function start(r) {
@@ -96,10 +103,17 @@ export function mountWith(layer, { bus, settings }, opts = {}) {
     bus.on('match-running', (p) => {
       const m = p && p.match; if (!m) return;
       if (typeof m.id === 'string' && m.id.startsWith('test-')) return; // the dock's banner test buttons
+      if (pinned && auto()) { showPinned(); return; } // the replay names the cast game; the poller follows someone else
       const n = (m.myTeam || []).length + (m.enemies || []).reduce((a, t) => a + t.length, 0);
       players = n || 2;
       tally.forMatch(m.id); publishTally();
       bus.emit('casting-match', { matchId: m.id, map: m.map || '', teams: playersFromMatch(m) });
+    }),
+    bus.on('replay-match', (p) => {
+      if (!p || !p.id || !Array.isArray(p.teams) || !p.teams.length) return;
+      if (pinned && pinned.id === p.id) return; // arrives from the room, from the other overlay, and from the cache
+      pinned = p;
+      if (auto()) showPinned();
     }),
     bus.on('casting-reset', (p) => { // arrives locally and again via the room: the second copy must not wipe later reactions
       const id = p && p.id;

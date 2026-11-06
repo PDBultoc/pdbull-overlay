@@ -12,7 +12,7 @@ function rig(over = {}) {
     [k, over[k] || ((api) => { apis.push(api); return { duration: 1, render: (tt) => log.push([k, +tt.toFixed(2), api.player && api.player.name, api.ctx]), dispose: () => log.push([k, 'end']) }; })]));
   const layer = { appendChild() {}, ownerDocument: null };
   const bus = fakeBus();
-  const h = mountWith(layer, { bus, cfg: {}, settings: { get: () => ({ casting: { sound: false, volume: 0.5 } }) } },
+  const h = mountWith(layer, { bus, cfg: {}, settings: { get: () => ({ casting: { sound: false, volume: 0.5, ...(over.casting || {}) } }) } },
     { effects, raf: (f) => frames.push(f), now: () => t, makeCanvas: () => { const ctx = { globalAlpha: 1, globalCompositeOperation: 'source-over', draws: [], fills: [], stack: [], ops: [], clearRect() { this.ops.push('clear'); },
       save() { this.stack.push([this.globalAlpha, this.globalCompositeOperation]); },
       restore() { [this.globalAlpha, this.globalCompositeOperation] = this.stack.pop() || [1, 'source-over']; },
@@ -177,4 +177,44 @@ test('every font face reactions-fx.js draws is warmed up and imported by tokens.
   assert.match(css, /Cinzel:wght@[^&"]*900/);
   assert.match(css, /Cormorant\+Garamond:[^"]*1,600/);
   assert.match(css, /Cormorant\+Garamond:[^"]*1,700/);
+});
+
+const RM = (id, names = ['A', 'B']) => ({ id, startedAt: '2026-11-06T14:23:38', source: 'replay',
+  teams: names.map((n, i) => ({ team: i + 1, players: [{ name: n, color: '#405BFF', profileId: i }] })) });
+const POLL = { match: { id: 'm1', map: 'Arabia', myTeam: [{ name: 'X', colorHex: '#111111' }], enemies: [[{ name: 'Y', colorHex: '#222222' }]] } };
+const castMatches = (r) => r.bus.out.filter(([t]) => t === 'casting-match').map(([, p]) => p);
+
+test('replay-match: pinned, shown as the casting match, and wins over later poller matches', () => {
+  const r = rig();
+  r.bus.emit('replay-match', RM('rep1'));
+  assert.deepEqual(castMatches(r).at(-1), { matchId: 'rep1', map: '', teams: RM('rep1').teams, source: 'replay', startedAt: '2026-11-06T14:23:38' });
+  r.bus.emit('match-running', POLL);
+  assert.equal(castMatches(r).at(-1).matchId, 'rep1');
+});
+test('the same replay twice (room + the other overlay) is shown once', () => {
+  const r = rig();
+  r.bus.emit('replay-match', RM('rep1')); r.bus.emit('replay-match', RM('rep1'));
+  assert.equal(castMatches(r).length, 1);
+});
+test('auto off: replay kept but not shown, poller drives; auto back on: next poll shows the replay', () => {
+  const cas = { auto: false };
+  const r = rig({ casting: cas });
+  r.bus.emit('replay-match', RM('rep1'));
+  assert.equal(castMatches(r).length, 0);
+  r.bus.emit('match-running', POLL);
+  assert.equal(castMatches(r).at(-1).matchId, 'm1');
+  cas.auto = true;
+  r.bus.emit('match-running', POLL);
+  assert.equal(castMatches(r).at(-1).matchId, 'rep1');
+});
+test('a new replay id resets the tally; invalid payloads are ignored', () => {
+  const r = rig();
+  r.bus.emit('replay-match', RM('rep1'));
+  r.bus.emit('reaction', { fx: 'blunder', player: { name: 'A', color: '#405BFF' }, id: 'b1' });
+  r.bus.emit('replay-match', RM('rep2', ['C', 'D']));
+  const last = r.bus.out.filter(([t]) => t === 'casting-tally').pop()[1];
+  assert.deepEqual(last.rows, []);
+  const n = castMatches(r).length;
+  r.bus.emit('replay-match', null); r.bus.emit('replay-match', { id: 'x', teams: [] });
+  assert.equal(castMatches(r).length, n);
 });
