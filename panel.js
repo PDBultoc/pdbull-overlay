@@ -6,6 +6,7 @@ import { createRemote, newRoom, stripSecrets } from './core/remote.js';
 import { connectStreamlabs } from './core/streamlabs.js';
 import { normalizeMatch } from './core/aoe2.js';
 import { coerceField, countdownEnd, roomLinks, testEvent, TEST_ALERTS, TEST_MATCHES, latestUpdate, createSender, createRawLog } from './core/panelcore.js';
+import { FX, makeReaction, parseManual, searchUrl, searchEntries, clampPoint } from './core/reactionlogic.js';
 
 function boot() {
   const settings = createSettings(localStorage, 'pdbull.v1');
@@ -154,7 +155,56 @@ function boot() {
     ]),
   ]);
 
-  $('cards').append(startingCard, brbCard, ambienceCard, alertsCard, introCard, bannerCard);
+  // --- Casting
+  let castTeams = [], castPick = null, castPoint = { x: 960, y: 500 };
+  const playersBox = el('div', { class: 'cast-players' });
+  const tallyBox = el('div', { class: 'cast-tally' });
+  const drawPlayers = () => {
+    playersBox.replaceChildren(...castTeams.map((t) => el('div', { class: 'cast-team' }, t.players.map((p) =>
+      el('button', { type: 'button', class: 'cast-p' + (castPick && castPick.name === p.name ? ' on' : ''), style: `--pc:${p.color}`, text: p.name,
+        onclick: () => { castPick = p; drawPlayers(); } })))));
+  };
+  bus.on('casting-match', (m) => { castTeams = (m && m.teams) || []; if (castPick && !castTeams.some((t) => t.players.some((p) => p.name === castPick.name))) castPick = null; drawPlayers(); });
+  bus.on('casting-tally', (s) => { tallyBox.replaceChildren(...((s && s.rows) || []).map((r) =>
+    el('div', { style: `color:${r.color}`, text: `${r.name} · B ${r.blunders} · W ${r.wows} · F ${r.funnies}` }))); });
+  const fireR = (fx) => { const r = makeReaction({ fx, player: castPick, x: castPoint.x, y: castPoint.y }); if (r) send('reaction', r); };
+  const LABEL = { blunder: 'Blunder', funny: 'Funny', wow: 'Wow', wololo: 'Wololo', spotlight: 'Spotlight', gg: 'GG' };
+  const fxBtns = el('div', { class: 'btns cast-fx' }, FX.map((fx, i) => el('button', { type: 'button', class: fx === 'gg' ? 'pri' : '', text: `${i + 1} ${LABEL[fx]}`, onclick: () => fireR(fx) })));
+  const pad = el('div', { class: 'cast-pad', title: 'Click = where Wow / Wololo / Spotlight start' });
+  const dot = el('span', { class: 'cast-dot' }); pad.append(dot);
+  const placeDot = () => { dot.style.left = (castPoint.x / 19.2) + '%'; dot.style.top = (castPoint.y / 10.8) + '%'; };
+  pad.addEventListener('click', (e) => { const r = pad.getBoundingClientRect(); castPoint = clampPoint((e.clientX - r.left) / r.width * 1920, (e.clientY - r.top) / r.height * 1080); placeDot(); });
+  placeDot();
+  const search = el('input', { type: 'text', placeholder: 'Follow player (name)' });
+  const results = el('div', { class: 'cast-results' });
+  const followed = el('div', { class: 'dim' });
+  const showFollowed = () => { followed.textContent = getp('casting.followProfileId') ? `Following ${getp('casting.followName')} (${getp('casting.followProfileId')})` : 'Following: my own games'; };
+  refreshers.push(showFollowed); showFollowed();
+  search.addEventListener('change', async () => {
+    results.textContent = '…';
+    try { const j = await (await fetch(searchUrl(search.value.trim()))).json();
+      results.replaceChildren(...searchEntries(j).map((p) => el('button', { type: 'button', text: `${p.name} · ${p.country} · ${p.games} games`,
+        onclick: () => { write('casting.followProfileId', p.profileId); write('casting.followName', p.name); results.replaceChildren(); showFollowed(); } })));
+    } catch { results.textContent = 'Search failed — try again'; }
+  });
+  // Manual fallback: used only while the overlay has sent no casting-match with players.
+  const manual = el('textarea', { rows: '3', placeholder: 'Manual players, one per line: Name #rrggbb' });
+  manual.value = getp('casting.manual') || '';
+  manual.addEventListener('change', () => { write('casting.manual', manual.value); if (!castLive) { castTeams = parseManual(manual.value); drawPlayers(); } });
+  let castLive = false;
+  bus.on('casting-match', (m) => { castLive = !!(m && m.teams && m.teams.length); if (!castLive) { castTeams = parseManual(manual.value); drawPlayers(); } });
+  castTeams = parseManual(manual.value); drawPlayers();
+  const castingCard = card('Casting', [
+    followed, el('div', { class: 'row' }, [search]), results, manual,
+    el('div', { class: 'btns' }, [el('button', { type: 'button', text: 'Follow my own games', onclick: () => { write('casting.followProfileId', null); write('casting.followName', ''); showFollowed(); } })]),
+    playersBox, fxBtns, pad, tallyBox,
+    el('div', { class: 'btns' }, [el('button', { type: 'button', class: 'dng', text: 'Reset tally', onclick: () => send('casting-reset', {}) })]),
+    check('Sound', 'casting.sound'), field('Volume', 'casting.volume', 'range', { min: '0', max: '1', step: '0.05' }),
+  ]);
+  castingCard.tabIndex = 0;
+  castingCard.addEventListener('keydown', (e) => { if (/^[1-6]$/.test(e.key) && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) fireR(FX[+e.key - 1]); });
+
+  $('cards').append(startingCard, brbCard, ambienceCard, alertsCard, introCard, bannerCard, castingCard);
 
   // --- room + links
   $('room').textContent = room;
@@ -167,6 +217,7 @@ function boot() {
   $('copyStarting').addEventListener('click', copy(links.starting));
   $('copyBrb').addEventListener('click', copy(links.brb));
   $('copyEnd').addEventListener('click', copy(links.ending));
+  $('copyCasting').addEventListener('click', copy(links.casting));
   remote.start().then(() => remote.publish(settings.get()));
 
   // --- Streamlabs: this panel holds the token and forwards only the events.
