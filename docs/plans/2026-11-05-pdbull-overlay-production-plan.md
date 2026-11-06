@@ -224,7 +224,7 @@ export function createQueue({ play, now = () => Date.now() }) { /* FIFO, one at 
 - [ ] Pass = game FPS drop ≤10 % average, OBS skipped/lagged frames ≤0.5 % during alerts. Fail → controller lowers cost in this order: bloom off on alerts, DPR 0.75, shadows off, maxFps 30 for intro; re-measure once. Still failing → record numbers, ask Paul.
 
 ### T15: Live gate (Paul's next stream)
-- [ ] Starting countdown from the dock; intro fires once per match (1v1 and, if played, a TG); real follow/sub/bits/donation (or Streamlabs tests) show; BRB scene; chat stays above the score panel. Paul reports; fixes go to a follow-up plan.
+- [x] (Paul, live stream night of 2026-11-05: "merge totul ok") Starting countdown from the dock; intro fires once per match (1v1 and, if played, a TG); real follow/sub/bits/donation (or Streamlabs tests) show; BRB scene; chat stays above the score panel. Paul reports; fixes go to a follow-up plan.
 
 ## Out of scope / later
 - Painterly token faces (macro look).

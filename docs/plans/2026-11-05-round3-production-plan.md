@@ -197,10 +197,10 @@ export function eloText(r)                                         // -> '1834' 
 
 ### S9: OBS gates on Paul's PC (each OBS change only with Paul's yes)
 - [x] (passed 2026-11-05, Paul: "Arată bine") **Stinger alpha:** Paul sets the new file on the Stinger (S6 guide) and switches Joc → BRB → Joc. Pass = scroll over the game with no black box, scene changes hidden under the paper. Fail → Track Matte fallback (Risks row 1), one attempt.
-- [ ] **Ending Soon:** source swapped; the candle beat plays on entering the scene; chat visible.
-- [ ] **Audio:** ambience audible on Starting/BRB/End in the OBS mixer, dock on/off and volume change it within 2 s; silent in Joc.
-- [ ] **Banner:** real match: appears after the intro, all players with ELO, nothing covered; hides at match end. Add banner on/off to the T14 performance check (round-2 plan).
-- [ ] Update `.claude/NEXT.md` and `docs/design.md` "ROUND 3" with the results.
+- [x] (Paul, live stream night of 2026-11-05: "merge totul ok") **Ending Soon:** source swapped; the candle beat plays on entering the scene; chat visible.
+- [x] (Paul, live stream night of 2026-11-05: "merge totul ok") Mixer level measured: Starting -20.7, End about -24 dBFS peak; the 2 s dock timing was not measured with a meter. **Audio:** ambience audible on Starting/BRB/End in the OBS mixer, dock on/off and volume change it within 2 s; silent in Joc.
+- [x] (Paul, live stream night of 2026-11-05: "merge totul ok") **Banner:** real match: appears after the intro, all players with ELO, nothing covered; hides at match end. Add banner on/off to the T14 performance check (round-2 plan).
+- [x] Update `.claude/NEXT.md` and `docs/design.md` "ROUND 3" with the results.
 
 ## Out of scope / later
 - Raid / charity / power-up alerts, gift-sub verification (round-2 open items).

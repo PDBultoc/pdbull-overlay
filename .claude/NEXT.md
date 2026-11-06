@@ -1,9 +1,15 @@
-# pdbull-overlay — NEXT (2026-11-06, round 3 LIVE on Pages; S9 OBS gates in progress)
-- LIVE: origin/main = 9c3e123 (code ff8953f), Pages version.json = 2026-11-05.8 (checked after push, ~80 s). `timeout 60 npm test` → 191/191. Stinger download: https://github.com/PDBultoc/pdbull-overlay/raw/main/assets/stinger-scroll.webm (200, 1321460 B).
-- Plan docs/plans/2026-11-05-round3-production-plan.md: S0–S8 done (S7 sheet ok'd by Paul, pushed on his yes). Stinger: VP9 alpha, cut 1000 ms, alpha gate passed. Ambience levels: starting −25.8 / brb −28.8 / ending −24.4 dBFS RMS, peaks ≤ −7.5.
-- S9 so far (2026-11-05/06): Claude set OBS over WebSocket at Paul's request (not live). Stinger = repo assets/stinger-scroll.webm, Time 1000 ms. Starting (Browser 3) + BRB (Browser 2): shutdown + Control audio via OBS. Ending Soon: new source 'Ending Soon Scene' (ending.html?room=…, shutdown, refresh on active, OBS audio); old image + Alertbox HIDDEN, not removed. STINGER GATE PASSED (Paul: "Arată bine"). Starting ambience reaches the OBS mixer: −20.7 dBFS peak. Backup + probes in .superpowers/sdd/2026-11-05-round3-production-plan/obs/: obs-read.mjs (state), obs-meter.mjs N / obs-meter-series.mjs N (levels for N s). All run with node under timeout and are read-only, except obs-apply.mjs.
-- S9 left: first run obs-read.mjs to confirm OBS kept the settings after its restart. Then: dock Ambience on/off/volume within 2 s (run obs-meter-series.mjs while Paul toggles); BRB + End audible, Joc silent; Ending Soon candle beat + chat visible; banner in a real match.
-- NEXT: S9 OBS gates with Paul (each OBS change on his yes): stinger alpha (fallback Track Matte, 1 attempt), Ending Soon swap, ambience in mixer + dock on/off/volume ≤2 s, banner in a real match (waits for intro, hides at match end; check the long map name). Then round-2 T14 performance (add banner on/off) and T15 live gate.
-- Deferred minors + all rulings: .superpowers/sdd/2026-11-05-round3-production-plan/progress.md (git-ignored; final-review.md there has the triage). Known: dock test banner disappears at the next poll (0–20 s).
-- Capture tip: overlay DOM shots need `--host-resolver-rules="MAP data.aoe2companion.com ~NOTFOUND, MAP ntfy.sh ~NOTFOUND, MAP sockets.streamlabs.com ~NOTFOUND" --virtual-time-budget=8000` (wall-clock --timeout catches the 0.6 s entrance animation). 3D scenes: in-app browser `?shot=1&t=N` + `wt.advance(0.001); canvas.toDataURL()`.
-- RULE (Paul): never reproduce a hang by re-running; read code, find cause, fix. Headless captures one at a time, timeout 60, tree-kill + zero-count proof, never in retry loops.
+# pdbull-overlay — NEXT (2026-11-06, round 3 DONE and live)
+- LIVE: Pages version.json = 2026-11-05.8 (code ff8953f). `timeout 60 npm test` → 191/191 at ff8953f. Local main is ahead of origin by docs-only commits (S9 notes), not pushed.
+- Round 3 plan docs/plans/2026-11-05-round3-production-plan.md: S0–S9 all ticked. S9: stinger gate passed 2026-11-05 ("Arată bine"); Paul streamed the night of 2026-11-05: "merge totul ok". Round-2 T15 live gate ticked on that report.
+- OBS as set by Claude over WebSocket at Paul's request, 2026-11-05:
+  - Stinger = repo assets/stinger-scroll.webm, Time 1000 ms.
+  - Starting (Browser 3) and BRB (Browser 2): shutdown + Control audio via OBS.
+  - Ending Soon: source 'Ending Soon Scene' (ending.html?room=…, shutdown, refresh on active, OBS audio). The old image + Alertbox are hidden, not removed.
+  - Settings survived an OBS restart (checked 2026-11-06).
+- Backup + probes: .superpowers/sdd/2026-11-05-round3-production-plan/obs/ (git-ignored; the backup holds the Alertbox URL). obs-read.mjs, obs-meter.mjs N and obs-meter-series.mjs N are read-only; obs-apply.mjs writes. Run any of them with `timeout 30 node <file>`.
+- Open: round-2 T14 performance numbers (game FPS, OBS skipped frames, banner on/off) were never measured. Ask Paul whether he wants them, since the live stream showed no problem. The dock ambience on/off "≤2 s" was not measured with a meter.
+- Deferred minors + rulings: .superpowers/sdd/2026-11-05-round3-production-plan/progress.md and final-review.md. Known: the dock test banner disappears at the next poll (0–20 s).
+- Capture tip:
+  - Overlay DOM shots need `--host-resolver-rules="MAP data.aoe2companion.com ~NOTFOUND, MAP ntfy.sh ~NOTFOUND, MAP sockets.streamlabs.com ~NOTFOUND" --virtual-time-budget=8000`.
+  - 3D scenes: in-app browser `?shot=1&t=N` + `wt.advance(0.001); canvas.toDataURL()`.
+- RULE (Paul): never reproduce a hang by re-running; read the code, find the cause, fix it. Headless captures run one at a time, with timeout 60, tree-kill + zero-count proof, never in retry loops.

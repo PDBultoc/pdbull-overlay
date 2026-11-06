@@ -108,3 +108,4 @@ Chosen: **A1 · B2 · D1 · E3 · F3**. Other variants are dropped.
 3. **Music: none.** Only generated ambience (candle crackle, hearth fire, quill on parchment) on Starting / BRB / End, on/off + volume in the dock.
 4. **In-game match banner:** top-right under the menu buttons, after the intro until match end; every player (up to 4v4) with colour, name, RM 1v1 ELO, civ (text), map name, team average ELO. Variant: **1 · Brass plaque** (walnut board, thin brass rim, engraved rows, team blocks stacked).
 Plan: `docs/plans/2026-11-05-round3-production-plan.md`.
+Result: live since 2026-11-05 (Pages 2026-11-05.8). OBS set up on 2026-11-05: stinger from the repo file, cut at 1000 ms; End scene as a browser source; ambience routed through OBS. Stinger gate passed on 2026-11-05. Paul streamed the night of 2026-11-05 and reported "merge totul ok". The T14 performance numbers were not measured.
