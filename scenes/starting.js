@@ -82,7 +82,7 @@ const sc = createScene({
   createTable: createWarTable,
   tableOpts: { board: false, candlePos: CANDLE, fov: 30, candle: { lightIntensity: 54 }, exposure: 1.1 },
   // shot: stop BEFORE make() starts rAF (build() is async; stopping inside it let ~3 SwiftShader frames render first)
-  build: (wt) => { wtRef = wt; if (SHOT) sc.stop(); shotDone = build(wt).catch((e) => console.error('starting build', e)); },
+  build: (wt) => { wtRef = wt; if (SHOT) sc.stop(); shotDone = build(wt).catch((e) => console.error('starting build', e)); return shotDone; },
 });
 fitStage($('stage')); // fit to the window like every scene page
 sc.start();

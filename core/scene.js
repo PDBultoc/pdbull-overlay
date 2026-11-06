@@ -6,6 +6,8 @@
 //  - dispose(): stop + free geometries, materials, textures, render targets, composer, renderer (forceContextLoss),
 //    and remove the canvas. start() after dispose() builds a fresh scene.
 //  - auto-stop on document hidden; resume on visible if start() was the last call.
+//  - created while hidden (OBS source in an inactive scene): one warm-up render after build (after its promise, if
+//    build returns one) so the first show does not stall on shader compiles.
 // createTable is injectable for node tests; the default lazily imports shared/war-table.js (needs the browser importmap),
 // in which case start() finishes asynchronously (running turns true once the table exists).
 
@@ -95,13 +97,21 @@ export function createScene({ canvasHost, build, onFrame, maxFps = 60, tableOpts
       return;
     }
     wt = t;
-    try { if (build) build(t); } catch (e) {
+    let built;
+    try { if (build) built = build(t); } catch (e) {
       console.error('createScene: build() failed', e);
       wt = null; wanted = false; halt();
       try { teardown(t); } catch (e2) { console.error('createScene: teardown failed', e2); }
       return;
     }
+    if (built && typeof built.then === 'function') built.then(() => warm(t), () => {}); else warm(t);
     run();
+  }
+  // OBS keeps a hidden browser source alive (shutdown off) but never gives it a rAF frame: render ONE frame while
+  // hidden so shaders, shadow maps and post passes compile now, not as seconds of black on the first show.
+  function warm(t) {
+    if (wt !== t || !wanted || active || !hidden()) return;
+    try { t.composer.render(); } catch (e) { console.error('createScene: warm-up render failed', e); }
   }
 
   const api = {

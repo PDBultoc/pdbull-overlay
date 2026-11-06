@@ -21,7 +21,7 @@ OBS → **Settings → Advanced → Sources** → bifează **Enable Browser Sour
 | Ending Soon | **Copy End link** | singura sursă din scenă |
 
 Pentru fiecare: **+ → Browser** → lipești link-ul în **URL** → Width 1920, Height 1080 → OK.
-La **Starting** și **BRB** bifează **Shutdown source when not visible** (nu consumă placa video cât joci). Dacă la trecerea pe scenă vezi o clipă un cadru gol, debifează și spune-mi.
+La **Starting**, **BRB** și **Ending** lasă **Shutdown source when not visible** și **Refresh browser when scene becomes active** **debifate**. Paginile rămân încărcate și sunt gata înainte să le afișezi, deci trecerea nu mai are cadre negre. Cât scena nu e afișată, OBS pune pagina pe pauză, așa că placa video nu lucrează pentru ea cât joci. Cu Shutdown bifat, fiecare trecere pe scenă reconstruiește scena 3D (2–7 s de negru, măsurat pe 2026-11-06).
 
 ### 2a. Tranziția (Stinger)
 1. Descarcă `assets/stinger-scroll.webm` din https://github.com/PDBultoc/pdbull-overlay (deschizi fișierul → **Download raw file**) într-un folder local care rămâne acolo.
@@ -31,7 +31,7 @@ La **Starting** și **BRB** bifează **Shutdown source when not visible** (nu co
 5. Dacă apare un dreptunghi negru, spune-mi.
 
 ### 2b. Ending Soon
-Scena veche (imagine + alertbox) nu mai trebuie: șterge imaginea și alertbox-ul. Pune în loc un **Browser Source** cu link-ul de la **Copy End link**, 1920 × 1080. Bifează **Shutdown source when not visible** și **Refresh browser when scene becomes active**. Dacă la trecerea pe scenă vezi o clipă un cadru gol, debifează și spune-mi.
+Scena veche (imagine + alertbox) nu mai trebuie: șterge imaginea și alertbox-ul. Pune în loc un **Browser Source** cu link-ul de la **Copy End link**, 1920 × 1080. Lasă **Shutdown source when not visible** și **Refresh browser when scene becomes active** debifate (vezi mai sus). Deschiderea scenei se reia singură de fiecare dată când arăți scena.
 
 ### 2c. Sunet
 Pe sursele Starting, BRB și End bifează **Control audio via OBS**. Volumul și pornit/oprit se reglează din cardul **Ambience** din dock.

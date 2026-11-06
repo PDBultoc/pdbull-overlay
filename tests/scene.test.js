@@ -207,3 +207,50 @@ test('dispose frees shadow maps and instanced meshes', () => {
   sc.start(); sc.dispose();
   assert.equal(shadow, 1); assert.equal(inst, 1);
 });
+
+// OBS keeps hidden browser sources alive (shutdown off) and hides them with WasHidden: a page created hidden never
+// gets a rAF frame, so its shaders would compile on the first show (seconds of black). One warm-up render while
+// hidden compiles them up front; the loop itself stays paused until visible.
+test('created while hidden: one warm-up render, no rAF until visible', () => {
+  const st = setup();
+  st.hidden = true;
+  let frames = 0;
+  const sc = createScene({ canvasHost: {}, build() {}, onFrame: () => frames++, createTable: st.createTable });
+  sc.start();
+  assert.equal(st.tables[0].log.renders, 1, 'warm-up render while hidden');
+  assert.equal(st.tables[0].log.steps.length, 0, 'warm-up does not advance the scene');
+  assert.equal(st.pending(), 0, 'no rAF while hidden');
+  assert.equal(sc.running, false);
+  st.setHidden(false);
+  st.tickFrame();
+  assert.equal(frames, 1);
+  assert.equal(st.tables[0].log.renders, 2);
+  sc.dispose();
+});
+
+test('async build while hidden: warm-up waits for the build promise', async () => {
+  const st = setup();
+  st.hidden = true;
+  let done;
+  const built = new Promise((r) => { done = r; });
+  const sc = createScene({ canvasHost: {}, build: () => built, createTable: st.createTable });
+  sc.start();
+  assert.equal(st.tables[0].log.renders, 0, 'no render before the async build finished');
+  done();
+  await built; await null;
+  assert.equal(st.tables[0].log.renders, 1, 'warm-up after the async build');
+  sc.dispose();
+});
+
+test('visible start, or stop() inside build: no extra warm-up render', async () => {
+  const st = setup();
+  const sc = createScene({ canvasHost: {}, build() {}, createTable: st.createTable });
+  sc.start();
+  assert.equal(st.tables[0].log.renders, 0, 'visible: the rAF loop renders, no warm-up');
+  sc.dispose();
+  st.hidden = true;
+  const sc2 = createScene({ canvasHost: {}, build: () => sc2.stop(), createTable: st.createTable });
+  sc2.start();
+  assert.equal(st.tables[1].log.renders, 0, 'stopped (shot mode) before warm-up: nothing rendered');
+  sc2.dispose();
+});
