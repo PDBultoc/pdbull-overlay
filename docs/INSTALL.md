@@ -39,6 +39,24 @@ Pe sursele Starting, BRB și End bifează **Control audio via OBS**. Volumul și
 ### 2d. Bannerul de meci
 Nu ai nimic de făcut: face parte din overlay. Îl pornești/oprești din cardul **Match banner** din dock.
 
+### 2e. Casting (CaptureAge)
+Scenă nouă în OBS, **Casting**, cu sursele în ordinea asta (de jos în sus):
+1. **Window Capture** pe CaptureAge, jos.
+2. Camera ta, deasupra, la **X 8, Y 755**, mărime **322 × 180** (același loc ca în scena de joc).
+3. Deasupra tuturor, un **Browser Source** cu link-ul de la **Copy Casting link**, 1920 × 1080. Bifează **Control audio via OBS**.
+
+Overlay-ul din scena asta arată rama camerei + chatul, alertele și reacțiile. Introul și bannerul de meci sunt oprite (CaptureAge arată deja datele astea).
+
+Din cardul **Casting** din dock:
+- **Follow player**: scrii un nume, apeși Enter și alegi profilul potrivit din listă (sau **Follow my own games**). Pentru meciul curent apar butoanele jucătorilor, grupate pe echipe.
+- Dacă nu e niciun meci live, scrii jucătorii de mână în căsuța de jos, unul pe linie: `Nume #rrggbb`.
+- Click pe un jucător, apoi pe o reacție: 1 Blunder, 2 Funny, 3 Wow, 4 Wololo, 5 Spotlight, 6 GG. Tastele 1–6 merg cât cardul Casting are focusul.
+- Pad-ul 16:9 setează de unde pornesc Wow / Wololo / Spotlight; **Centre** îl readuce în mijloc.
+- Scorul (B / W / F pe jucător) se resetează singur la meci nou; **Reset tally** îl resetează de mână.
+- GG arată „Play of the game” și „Blunder of the game”, calculate din scor.
+- **Sound** și **Volume**: sunetul trece prin OBS.
+- O reacție nouă o înlocuiește pe cea care rulează; un GG poate fi înlocuit doar de alt GG.
+
 ## 3. Camera
 În scena de joc, sursa camerei stă **sub** overlay, la **X 8, Y 755**, mărime **322 × 180** (rama de nuc din overlay o încadrează).
 
