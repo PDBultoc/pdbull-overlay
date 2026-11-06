@@ -254,3 +254,39 @@ test('visible start, or stop() inside build: no extra warm-up render', async () 
   assert.equal(st.tables[1].log.renders, 0, 'stopped (shot mode) before warm-up: nothing rendered');
   sc2.dispose();
 });
+
+// OBS 33.0.1, measured 2026-11-06: after a scene with a war table is shown and hidden again, document.hidden stays
+// false and the page keeps rendering (OBS browser GPU process 0 % -> 43 % with BRB hidden). obs-browser also fires
+// obsSourceVisibleChanged {visible} on window: the loop must halt on visible:false and resume on visible:true.
+function obsEvents() {
+  const ls = new Map();
+  globalThis.addEventListener = (t, f) => { if (!ls.has(t)) ls.set(t, new Set()); ls.get(t).add(f); };
+  globalThis.removeEventListener = (t, f) => { ls.get(t)?.delete(f); };
+  return {
+    visible: (v) => (ls.get('obsSourceVisibleChanged') || []).forEach((f) => f({ detail: { visible: v } })),
+    count: (t) => (ls.get(t) || new Set()).size,
+  };
+}
+
+test('OBS obsSourceVisibleChanged false halts the loop, true resumes; dispose detaches', () => {
+  const st = setup();
+  const obs = obsEvents();
+  try {
+    const sc = createScene({ canvasHost: {}, build() {}, createTable: st.createTable });
+    sc.start();
+    assert.equal(sc.running, true);
+    obs.visible(false);
+    assert.equal(sc.running, false, 'hidden by OBS: loop halted');
+    assert.equal(st.pending(), 0, 'no rAF while OBS hides the source');
+    st.setHidden(false); // a document visibility event must not restart a source OBS still hides
+    assert.equal(st.pending(), 0);
+    obs.visible(true);
+    assert.equal(sc.running, true, 'shown again: loop resumes');
+    assert.equal(st.pending(), 1);
+    sc.stop();
+    obs.visible(false); obs.visible(true);
+    assert.equal(st.pending(), 0, 'stopped scene must not resume on show');
+    sc.dispose();
+    assert.equal(obs.count('obsSourceVisibleChanged'), 0, 'dispose removes the OBS listener');
+  } finally { delete globalThis.addEventListener; delete globalThis.removeEventListener; }
+});

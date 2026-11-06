@@ -5,7 +5,7 @@
 //  - stop(): cancels rAF (the GPU context stays alive for a quick resume).
 //  - dispose(): stop + free geometries, materials, textures, render targets, composer, renderer (forceContextLoss),
 //    and remove the canvas. start() after dispose() builds a fresh scene.
-//  - auto-stop on document hidden; resume on visible if start() was the last call.
+//  - auto-stop on document hidden or OBS obsSourceVisibleChanged {visible:false}; resume on visible if start() was the last call.
 //  - created while hidden (OBS source in an inactive scene): one warm-up render after build (after its promise, if
 //    build returns one) so the first show does not stall on shader compiles.
 // createTable is injectable for node tests; the default lazily imports shared/war-table.js (needs the browser importmap),
@@ -54,9 +54,11 @@ function teardown(t) {
 }
 
 export function createScene({ canvasHost, build, onFrame, maxFps = 60, tableOpts = {}, createTable, loadTable = loadDefault } = {}) {
-  let wt = null, raf = 0, wanted = false, active = false, last = 0, gen = 0, listening = false;
+  let wt = null, raf = 0, wanted = false, active = false, last = 0, gen = 0, listening = false, obsHidden = false;
   const minGap = 1000 / maxFps - 1;
-  const hidden = () => !!globalThis.document?.hidden;
+  // OBS 33.0.1 (measured 2026-11-06): a source shown once and hidden again keeps document.hidden false and kept
+  // rendering its war table (~43 % GPU, BRB). obsSourceVisibleChanged {visible} is the reliable signal.
+  const hidden = () => obsHidden || !!globalThis.document?.hidden;
 
   function frame(now) {
     raf = 0;
@@ -82,11 +84,14 @@ export function createScene({ canvasHost, build, onFrame, maxFps = 60, tableOpts
     if (raf) { globalThis.cancelAnimationFrame(raf); raf = 0; }
   }
   function onVis() { if (hidden()) halt(); else run(); }
+  function onObsVisible(e) { obsHidden = !(e && e.detail && e.detail.visible); onVis(); }
   function listen(on) {
     if (on === listening) return;
     listening = on;
     const d = globalThis.document;
     if (on) d?.addEventListener('visibilitychange', onVis); else d?.removeEventListener('visibilitychange', onVis);
+    if (on) globalThis.addEventListener?.('obsSourceVisibleChanged', onObsVisible);
+    else globalThis.removeEventListener?.('obsSourceVisibleChanged', onObsVisible);
   }
   function make(factory) {
     let t;
