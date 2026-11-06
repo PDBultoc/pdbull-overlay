@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mountWith } from '../modules/reactions.js';
+import { caKeepOut } from '../core/reactionlogic.js';
 
 function fakeBus() { const h = new Map(), out = []; return { out,
   on: (t, f) => { (h.get(t) || h.set(t, new Set()).get(t)).add(f); return () => h.get(t).delete(f); },
@@ -12,7 +13,11 @@ function rig(over = {}) {
   const layer = { appendChild() {}, ownerDocument: null };
   const bus = fakeBus();
   const h = mountWith(layer, { bus, cfg: {}, settings: { get: () => ({ casting: { sound: false, volume: 0.5 } }) } },
-    { effects, raf: (f) => frames.push(f), now: () => t, makeCanvas: () => { const ctx = { globalAlpha: 1, draws: [], clearRect() {}, save() {}, restore() {}, drawImage() { this.draws.push(this.globalAlpha); } }; ctxs.push(ctx); return { getContext: () => ctx, style: {} }; },
+    { effects, raf: (f) => frames.push(f), now: () => t, makeCanvas: () => { const ctx = { globalAlpha: 1, globalCompositeOperation: 'source-over', draws: [], fills: [], stack: [], clearRect() {},
+      save() { this.stack.push([this.globalAlpha, this.globalCompositeOperation]); },
+      restore() { [this.globalAlpha, this.globalCompositeOperation] = this.stack.pop() || [1, 'source-over']; },
+      fillRect(x, y, w, h) { this.fills.push({ x, y, w, h, op: this.globalCompositeOperation, a: this.globalAlpha }); },
+      drawImage() { this.draws.push(this.globalAlpha); } }; ctxs.push(ctx); return { getContext: () => ctx, style: {} }; },
       makeDom: () => { const d = { removed: false, remove() { d.removed = true; }, style: {} }; doms.push(d); return d; }, audio: () => (over.audio ? over.audio() : null) });
   const step = (ms) => { t += ms; const f = frames.splice(0); f.forEach((fn) => fn()); };
   return { h, bus, log, step, frames, apis, ctxs, doms };
@@ -61,6 +66,18 @@ test('null player gets a neutral one; api carries awards (latest wins ties) and 
   assert.ok(Array.isArray(api.tally));
 });
 
+test('after a frame the engine erases the keep-out rect (destination-out, feathered) and restores the ctx state', () => {
+  const r = rig();
+  r.bus.emit('match-running', { match: { id: 'm1', myTeam: [{ name: 'A' }, { name: 'B' }], enemies: [[{ name: 'C' }, { name: 'D' }]] } });
+  r.bus.emit('reaction', { fx: 'wow', player: { name: 'A', color: '#111111' }, id: 'k1' });
+  r.step(16);
+  const ko = caKeepOut(4), main = r.ctxs[0];
+  const outs = main.fills.filter((f) => f.op === 'destination-out');
+  assert.ok(outs.some((f) => f.x === ko.x && f.y === ko.y && f.w === ko.w && f.h === ko.h && f.a === 1), 'full erase of the rect');
+  assert.ok(outs.some((f) => f.x === ko.x - 30 && f.w === ko.w + 60 && f.a === 0.25), 'feather ring out to 30 px');
+  assert.equal(main.globalCompositeOperation, 'source-over');
+  assert.equal(main.globalAlpha, 1);
+});
 test('a replaced effect keeps rendering (offscreen, faded) for <=150 ms, then is disposed', () => {
   const r = rig();
   r.bus.emit('reaction', { fx: 'wow', player: { name: 'A', color: '#111111' }, id: 'a' });

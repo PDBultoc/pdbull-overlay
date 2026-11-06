@@ -40,7 +40,7 @@ export function createTally() {
   const pick = (key, last) => rows.filter((r) => r[key] > 0)
     .sort((a, b) => b[key] - a[key] || b[last] - a[last])[0] || null;
   return {
-    forMatch(id) { if (id !== match) { match = id; rows = []; } },
+    forMatch(id) { if (id !== match) { if (match != null) rows = []; match = id; } }, // first known match keeps rows fired before the first poll
     reset() { rows = []; },
     record(fx, player) {
       const key = KEY[fx]; const p = cleanPlayer(player);

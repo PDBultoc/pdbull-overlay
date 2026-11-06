@@ -2,7 +2,7 @@
    No frames while idle; one effect at a time (replace rule in core/reactionlogic.js).
    mount(layer, { bus, settings }) -> { unmount(), debug } */
 import { makeReaction, replaces, createTally, playersFromMatch, seeded, ease, PLAY, DURATION, caKeepOut } from '../core/reactionlogic.js';
-import { EFFECTS } from './reactions-fx.js';
+import { EFFECTS, punch } from './reactions-fx.js';
 const W = 1920, H = 1080, FADE = 0.15;
 const NEUTRAL = { name: '', color: '#d6c6a6' };
 
@@ -71,6 +71,7 @@ export function mountWith(layer, { bus, settings }, opts = {}) {
       if (t > cur.inst.duration) { end(cur); cur = null; }
       else if (!draw(cur, t, ctx)) { end(cur); cur = null; }
     }
+    if (cur || outgoing) { try { punch(ctx, caKeepOut(players), 0, 0); } catch {} } // never cover the CaptureAge score rows
     if (cur || outgoing) { looping = true; raf(frame); }
   }
   const kick = () => { if (!looping) { looping = true; raf(frame); } };

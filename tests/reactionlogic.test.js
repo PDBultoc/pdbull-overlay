@@ -27,6 +27,13 @@ test('a new reaction replaces the current one, except over GG', () => {
   assert.equal(replaces({ fx: 'gg' }, { fx: 'wow' }), false);
   assert.equal(replaces({ fx: 'gg' }, { fx: 'gg' }), true);
 });
+test('tally: first known match keeps rows fired before it; a switch between known matches resets', () => {
+  const a = { name: 'A', color: '#111111' };
+  const t = createTally();
+  t.record('wow', a);
+  t.forMatch('m1'); assert.equal(t.rows().length, 1);   // null -> m1: kept
+  t.forMatch('m2'); assert.equal(t.rows().length, 0);   // m1 -> m2: reset
+});
 test('tally counts per player, resets on a new match, awards go to the latest on ties', () => {
   const t = createTally();
   const a = { name: 'A', color: '#111111' }, b = { name: 'B', color: '#222222' };

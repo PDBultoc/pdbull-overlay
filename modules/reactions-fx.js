@@ -88,9 +88,9 @@ function drawWash(c, b, k, a = 1) {
 /* ---------- darkening layer with soft top/bottom edges (fades to 0 over 40 px at y 150 and y 850) ---------- */
 function mkLayer() { const cv = document.createElement('canvas'); cv.width = PLAY.w; cv.height = PLAY.h; return cv; }
 /* soft punch-out of the CaptureAge score rows (keep-out rect) from our own darkening pixels; ~30 px feathered edge */
-function punch(lc, ko) {
+export function punch(lc, ko, offX = PLAY.x, offY = PLAY.y) {
   if (!ko) return;
-  const ox = ko.x - PLAY.x, oy = ko.y - PLAY.y;
+  const ox = ko.x - offX, oy = ko.y - offY;
   lc.save(); lc.globalCompositeOperation = 'destination-out'; lc.fillStyle = '#000';
   lc.globalAlpha = 1; lc.fillRect(ox, oy, ko.w, ko.h);
   lc.globalAlpha = 0.25;
