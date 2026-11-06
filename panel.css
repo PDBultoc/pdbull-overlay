@@ -27,7 +27,7 @@ button.dng { border-color: var(--bad); color: var(--bad); }
 .chk label { display: flex; gap: 5px; align-items: center; }
 .cd { font-variant-numeric: tabular-nums; font-size: 24px; color: var(--brass-300); text-align: center; margin: 4px 0; }
 .cast-team { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
-.cast-p { border-left: 6px solid var(--pc); }
+.cast-p { border-left: 6px solid var(--pc); color: var(--pc); }
 .cast-p.on { outline: 2px solid var(--brass-300, #e3c48a); }
 .cast-fx button { min-width: 88px; }
 .cast-pad { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #2a1a10; border: 1px solid #57411f; margin: 6px 0; cursor: crosshair; }

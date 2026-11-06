@@ -197,7 +197,9 @@ function boot() {
   const castingCard = card('Casting', [
     followed, el('div', { class: 'row' }, [search]), results, manual,
     el('div', { class: 'btns' }, [el('button', { type: 'button', text: 'Follow my own games', onclick: () => { write('casting.followProfileId', null); write('casting.followName', ''); showFollowed(); } })]),
-    playersBox, fxBtns, pad, tallyBox,
+    playersBox, fxBtns, pad,
+    el('div', { class: 'btns' }, [el('button', { type: 'button', text: 'Centre', onclick: () => { castPoint = clampPoint(NaN, NaN); placeDot(); } })]),
+    tallyBox,
     el('div', { class: 'btns' }, [el('button', { type: 'button', class: 'dng', text: 'Reset tally', onclick: () => send('casting-reset', {}) })]),
     check('Sound', 'casting.sound'), field('Volume', 'casting.volume', 'range', { min: '0', max: '1', step: '0.05' }),
   ]);
