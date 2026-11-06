@@ -195,144 +195,259 @@ function blunder(api) {
   } };
 }
 
-/* ============================================================ 2 FUNNY (marginalia) */
-const ellPts = (cx, cy, rx, ry, n, a0 = 0, a1 = 6.2832) => { const o = []; for (let i = 0; i <= n; i++) { const a = a0 + (a1 - a0) * i / n; o.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]); } return o; };
-function hatch(cx, cy, rx, ry, step) {
+/* ============================================================ 2 FUNNY (marginalia drolleries) */
+// A drawing is a list of shapes { p: points } painted back to front. Flags: f = fill (1 ivory, 2 brass, 3 ink),
+// h = hatch line (shade, no under-stroke), d = fine ink detail (eyes, mouths), b = brass line, w = line width (px).
+// The three scenes stay in x 340-1520 / y 640-850: clear of the cam (x < 340, y > 755) and CA's 4v4 score rows (x > 1520).
+const P2 = Math.PI * 2;
+const ellPts = (cx, cy, rx, ry, n, a0 = 0, a1 = P2) => { const o = []; for (let i = 0; i <= n; i++) { const a = a0 + (a1 - a0) * i / n; o.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]); } return o; };
+const V = (len, a) => [Math.sin(a) * len, Math.cos(a) * len];   // a = angle from straight down, + = forward (right)
+const add = (p, q) => [p[0] + q[0], p[1] + q[1]];
+const lp = (p, q, k) => [lerp(p[0], q[0], k), lerp(p[1], q[1], k)];
+function qb(p0, c, p1, n = 6) { const o = []; for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; o.push([u * u * p0[0] + 2 * u * t * c[0] + t * t * p1[0], u * u * p0[1] + 2 * u * t * c[1] + t * t * p1[1]]); } return o; }
+// a limb with volume: a closed, tapered outline with round ends around a centre polyline
+function limb(pts, w0, w1) {
+  const n = pts.length, L = [], R = [], ang = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)], an = Math.atan2(b[1] - a[1], b[0] - a[0]), w = lerp(w0, w1, i / (n - 1)) / 2;
+    ang.push(an);
+    L.push([pts[i][0] + Math.cos(an + Math.PI / 2) * w, pts[i][1] + Math.sin(an + Math.PI / 2) * w]);
+    R.push([pts[i][0] + Math.cos(an - Math.PI / 2) * w, pts[i][1] + Math.sin(an - Math.PI / 2) * w]);
+  }
+  const cap = (c, an, w) => { const o = []; for (let j = 1; j < 5; j++) { const a = an + Math.PI / 2 - Math.PI * j / 5; o.push([c[0] + Math.cos(a) * w, c[1] + Math.sin(a) * w]); } return o; };
+  return [...L, ...cap(pts[n - 1], ang[n - 1], w1 / 2), ...R.reverse(), ...cap(pts[0], ang[0] + Math.PI, w0 / 2), L[0]];
+}
+// cross-hatching inside an ellipse (lower half only when low = 1)
+function hatch(cx, cy, rx, ry, step, low = 0) {
   const o = [];
-  for (let yy = cy - ry + step * 0.6; yy < cy + ry - 2; yy += step) { const hw = rx * Math.sqrt(Math.max(0, 1 - ((yy - cy) / ry) ** 2)) * 0.85; o.push({ p: [[cx - hw, yy + 3], [cx + hw, yy - 3]], h: 1 }); }
-  for (let yy = cy + step * 0.3; yy < cy + ry - 2; yy += step) { const hw = rx * Math.sqrt(Math.max(0, 1 - ((yy - cy) / ry) ** 2)) * 0.8; o.push({ p: [[cx - hw, yy - 3], [cx + hw, yy + 3]], h: 1 }); }
+  for (let yy = cy - ry + step * 0.6; yy < cy + ry - 2; yy += step) {
+    if (low && yy < cy) continue;
+    const hw = rx * Math.sqrt(Math.max(0, 1 - ((yy - cy) / ry) ** 2)) * 0.8; o.push({ p: [[cx - hw, yy + 2.5], [cx + hw, yy - 2.5]], h: 1 });
+  }
   return o;
 }
-function human(x, y, k, o) {
-  const S = [], run = o.run || 0, bob = run ? [0, -3, 0][k] : 0, a = [0.6, 0, -0.6][k] * run;
-  const hip = [x, y - 44 + bob], sh = [x + o.lean, y - 78 + bob], hd = [sh[0] + o.lean * 0.3 + 3, y - 91 + bob];
-  S.push({ p: ellPts(hd[0], hd[1], 9, 10, 12), f: 1 });
-  S.push({ p: [hip, [(hip[0] + sh[0]) / 2 - 1, (hip[1] + sh[1]) / 2], sh] });
-  if (o.robe) {
-    S.push({ p: [sh, [x - 15, y - 22], [x - 13, y - 3], [x + 13, y - 3], [x + 15, y - 22], sh], f: 1 });
-    S.push({ p: [[x - 4, y - 36], [x - 6, y - 4]] }); S.push({ p: [[x - 6, y], [x - 14, y]] }); S.push({ p: [[x + 8, y], [x + 16, y]] });
-  } else {
-    for (const s of [1, -1]) {
-      const g = a * s, kn = [hip[0] + Math.sin(g) * 20, hip[1] + Math.cos(g) * 22];
-      const ft = [hip[0] + Math.sin(g) * 34, Math.min(y, hip[1] + Math.cos(g) * 42) - (run && g < 0 ? 8 : 0)];
-      S.push({ p: [hip, kn, ft, [ft[0] + 7, ft[1]]] });
-    }
-  }
-  const hands = [];
-  o.arms(k).forEach(([dx, dy]) => { const h = [sh[0] + dx, sh[1] + dy]; hands.push(h); S.push({ p: [sh, [sh[0] + dx * 0.5, sh[1] + dy * 0.5 + 6], h] }); });
-  S.push({ p: [[hd[0] + 4, hd[1] - 2], [hd[0] + 7, hd[1] - 2]], d: 1 });
-  S.push({ p: o.mouth ? ellPts(hd[0] + 5, hd[1] + 5, 2.4, 3, 6) : [[hd[0] + 3, hd[1] + 5], [hd[0] + 7, hd[1] + 5]], d: 1 });
-  if (o.hat === 'hood') S.push({ p: [[hd[0] - 10, hd[1] + 2], [hd[0] - 6, hd[1] - 14], [hd[0] + 3, hd[1] - 17], [hd[0] + 10, hd[1] - 4]] });
-  if (o.hat === 'helm') {
-    S.push({ p: ellPts(hd[0], hd[1] - 2, 11, 11, 8, Math.PI, 6.2832) }); S.push({ p: [[hd[0] - 2, hd[1] - 13], [hd[0] - 14, hd[1] - 23], [hd[0] - 22, hd[1] - 12]] });
-    S.push({ p: [[hd[0] + 1, hd[1]], [hd[0] + 11, hd[1]]] });
-  }
-  if (o.hat === 'monk') { S.push({ p: ellPts(hd[0], hd[1] - 9, 6, 2.5, 8) }); S.push({ p: [[hd[0] - 10, hd[1] + 2], [hd[0] - 12, hd[1] + 14], [hd[0] - 4, hd[1] + 16]] }); }
-  if (o.hatch) for (let i = 0; i < 3; i++) { const yy = sh[1] + 8 + i * 8, xm = lerp(sh[0], hip[0], 0.2 + i * 0.25); S.push({ p: [[xm - 6, yy + 2], [xm + 6, yy - 2]], h: 1 }); }
-  return { S, sh, hands };
+// shade strokes across a limb's centre line
+function shade(pts, n, len) {
+  const o = [];
+  for (let i = 1; i <= n; i++) { const k = i / (n + 1), j = Math.min(pts.length - 2, Math.floor(k * (pts.length - 1))), c = lp(pts[j], pts[j + 1], 0.5); o.push({ p: [[c[0] - len, c[1] + len * 0.6], [c[0] + len * 0.5, c[1] - len * 0.4]], h: 1 }); }
+  return o;
 }
-function chicken(x, y, k) {
-  const S = [];
-  S.push({ p: ellPts(x, y - 22, 16, 12, 18), f: 1 }); S.push(...hatch(x, y - 22, 16, 12, 5));
-  S.push({ p: ellPts(x + 18, y - 38, 6, 6, 10), f: 1 }); S.push({ p: [[x + 24, y - 38], [x + 31, y - 36], [x + 24, y - 34]] });
-  S.push({ p: [[x + 15, y - 44], [x + 17, y - 50], [x + 19, y - 45], [x + 22, y - 50]] });
-  S.push({ p: [[x + 19, y - 40], [x + 21, y - 40]], d: 1 });
-  S.push({ p: [[x - 15, y - 26], [x - 24, y - 36], [x - 21, y - 28], [x - 31, y - 40], [x - 24, y - 24]] });
-  S.push({ p: [[x - 2, y - 24], [x - 10, y - 24 - [4, 13, 4][k]], [x - 17, y - 25]] });
-  const fx = [-7, 0, 7][k];
-  S.push({ p: [[x - 2, y - 11], [x + fx * 0.6, y - 5], [x + fx - 1, y]] }); S.push({ p: [[x + 5, y - 11], [x - fx * 0.6 + 4, y - 5], [x - fx + 3, y]] });
-  for (let i = 0; i < 3; i++) S.push({ p: [[x - 36 - i * 4, y - 14 - i * 7], [x - 48 - i * 4, y - 14 - i * 7]], h: 1 });
+// a face looking right: one big readable eye; brow and mouth carry the mood
+function face(S, h, r, m) {
+  const ex = h[0] + r * 0.36, ey = h[1] - r * 0.16, er = r * 0.32, pp = m.pupil || [0.32, 0.05], bk = m.brow || 0;
+  S.push({ p: [[h[0] + r * 0.86, h[1] - r * 0.28], [h[0] + r * 1.34, h[1] + r * 0.14], [h[0] + r * 0.82, h[1] + r * 0.32]], w: 2.8 });   // nose
+  S.push({ p: ellPts(ex, ey, er * 0.82, er, 12), f: 1, d: 1 });
+  S.push({ p: ellPts(ex + er * pp[0], ey + er * pp[1], er * 0.34, er * 0.4, 8), f: 3, d: 1 });
+  S.push({ p: [[ex - er * 1.15, ey - er * 1.45 - bk * er * 0.55], [ex + er * 1.05, ey - er * 1.45 + bk * er * 0.6]], d: 1, w: 3 });   // brow
+  const mx = h[0] + r * 0.56, my = h[1] + r * 0.56;
+  if (m.mouth === 'o') S.push({ p: ellPts(mx, my, r * 0.17, r * 0.25, 10), f: 3, d: 1 });
+  else if (m.mouth === 'shout') S.push({ p: [[mx - r * 0.32, my - r * 0.14], [mx + r * 0.36, my - r * 0.2], [mx + r * 0.1, my + r * 0.3], [mx - r * 0.32, my - r * 0.14]], f: 3, d: 1 });
+  else S.push({ p: qb([mx - r * 0.38, my - r * 0.12], [mx - r * 0.02, my + r * 0.24], [mx + r * 0.36, my - r * 0.22]), d: 1, w: 2.4 });   // grin
+}
+// leg angles per pose: [back leg, front leg], each [thigh, shin]
+const RUN = [[[-0.55, -1.35], [0.62, 0.12]], [[0.3, -1.5], [0.04, -0.04]], [[0.62, 0.12], [-0.55, -1.35]]];
+function person(x, k, o) {
+  const S = [], legs = o.legs ? o.legs(k) : RUN[k], lean = o.lean || 0, r = 12.5;
+  const foot0 = (lg) => add(add([x, -47], V(24, lg[0])), V(23, lg[1]));
+  const lift = o.robe ? 0 : -Math.max(...legs.map((lg) => foot0(lg)[1]));
+  const hip = [x, -47 + lift], neck = [x + lean, -80 + lift], hd = [neck[0] + 3 + lean * 0.25, neck[1] - 14];
+  const shB = [neck[0] - 8, neck[1] + 5], shF = [neck[0] + 7, neck[1] + 4];
+  const arms = o.arms(k), armPts = (sh, [ua, fa]) => { const el = add(sh, V(17, ua)); return [sh, lp(sh, el, 0.5), el, add(el, V(8, fa)), add(el, V(16, fa))]; };
+  const arm = (sh, a) => { const pts = armPts(sh, a); S.push({ p: limb(pts, 8, 5.5), f: 1 }); S.push({ p: ellPts(pts[4][0], pts[4][1], 3.6, 3.6, 8), f: 1 }); return pts; };
+  if (o.behind) o.behind(S, { hip, neck, hd, r });
+  const back = arm(shB, arms[0]); S.push(...shade(back, 2, 3));
+  if (!o.robe) legs.forEach((lg, i) => {
+    const kn = add(hip, V(24, lg[0])), ft = add(kn, V(23, lg[1])), pts = [hip, lp(hip, kn, 0.5), kn, lp(kn, ft, 0.5), ft];
+    S.push({ p: limb(pts, 10, 6.5), f: 1 }); if (!i) S.push(...shade(pts, 3, 3.5));
+    S.push({ p: limb([[ft[0] - 2, ft[1] - 2.5], [ft[0] + 7, ft[1] - 1.5]], 6.5, 5), f: 3 });
+  });
+  // tunic (or robe) with a dagged hem, shaded on its back half
+  const sway = o.robe ? 0 : [3, 0, -3][k], hl = o.long ? 21 : 13;
+  const hemF = o.robe ? [x + 17, -3] : [hip[0] + 15 + sway, hip[1] + hl], hemB = o.robe ? [x - 16, -3] : [hip[0] - 13 + sway, hip[1] + hl + 1];
+  const wF = [hip[0] + 9, hip[1] - 5], wB = [hip[0] - 9, hip[1] - 4];
+  const dag = [0.2, 0.4, 0.6, 0.8].map((q, i) => add(lp(hemF, hemB, q), [0, i % 2 ? 0 : -5]));
+  S.push({ p: [shB, [neck[0], neck[1] + 1], shF, [shF[0] + 3, lerp(shF[1], wF[1], 0.45)], wF, hemF, ...dag, hemB, wB, [shB[0] - 3, lerp(shB[1], wB[1], 0.5)], shB], f: 1 });
+  for (let i = 0; i < 4; i++) { const a = lp(shB, hemB, 0.18 + i * 0.2); S.push({ p: [add(a, [2, 2]), add(a, [9, -3])], h: 1 }); }
+  S.push({ p: [wB, wF], b: 1, w: 3 });
+  if (o.chest) o.chest(S, { neck, hip, wF, wB });
+  if (o.robe) S.push({ p: limb([[hemF[0] - 3, -3], [hemF[0] + 6, -2]], 6, 5), f: 3 });   // a sandal under the robe
+  // head
+  if (o.hood) { S.push({ p: limb([[hd[0] - 12, hd[1] - 3], [hd[0] - 21, hd[1] + 6 + [2, -2, 1][k]], [hd[0] - 27, hd[1] + 17 + [-1, 2, -3][k]]], 7, 2.5), f: 1 }); S.push({ p: ellPts(hd[0] - 3, hd[1] - 1, r + 4, r + 4.5, 16), f: 1 }); }
+  S.push({ p: ellPts(hd[0], hd[1], r * 0.95, r, 18), f: 1 });
+  if (o.hat) o.hat(S, hd, r, k);
+  face(S, hd, r, o.mood);
+  if (o.hood) S.push({ p: ellPts(hd[0] - 1, hd[1], r + 2, r + 2, 10, -Math.PI * 1.22, -Math.PI * 0.14), w: 3 });
+  const front = arm(shF, arms[1]);
+  if (o.front) o.front(S, { back, front, hd, r });
   return S;
 }
-function sheep(x, y, k) {
-  const S = [], body = [];
-  for (let i = 0; i <= 40; i++) { const a = i / 40 * 6.2832, r = 1 + 0.14 * Math.abs(Math.sin(a * 5)); body.push([x + Math.cos(a) * 27 * r, y - 30 + Math.sin(a) * 18 * r]); }
-  S.push({ p: body, f: 1 }); S.push(...hatch(x, y - 30, 24, 15, 5));
-  S.push({ p: ellPts(x + 32, y - 36, 9, 7, 12), f: 1 }); S.push({ p: [[x + 27, y - 41], [x + 20, y - 45], [x + 26, y - 36]] }); S.push({ p: [[x + 34, y - 38], [x + 37, y - 38]], d: 1 });
-  [-16, -8, 8, 16].forEach((lx, i) => { const sw = [-6, 0, 6][(k + i) % 3]; S.push({ p: [[x + lx, y - 14], [x + lx + sw * 0.5, y - 7], [x + lx + sw, y]] }); });
+
+function chicken(x, k) {
+  const S = [], by = -27 + [-2, -6, -1][k], hx = x + 17, hy = by - 17 + [0, -3, 1][k];
+  [[-30, -16], [-35, -6], [-31, 4]].forEach(([dx, dy]) => S.push({ p: limb([[x - 13, by - 2], [x + dx * 0.6, by + dy * 0.6 - 3], [x + dx, by + dy - 6]], 7, 2), f: 1 }));
+  const legs = [[0.75, -0.6], [-0.7, 0.5], [0.1, 0.95]][k];
+  legs.forEach((a, i) => { const h = [x + 1 + i * 3, by + 11], kn = add(h, V(9, a)), ft = add(kn, V(9, a * 0.3)); S.push({ p: [h, kn, ft], w: 2.6 }); S.push({ p: [ft, add(ft, [6, 0])], w: 2.2 }); S.push({ p: [ft, add(ft, [-3, 1])], w: 2.2 }); });
+  S.push({ p: ellPts(x, by, 18, 14, 20), f: 1 }); S.push(...hatch(x, by, 18, 14, 4.5, 1));
+  S.push({ p: limb([[x + 11, by - 6], [x + 15, by - 12], [hx - 1, hy + 4]], 11, 9), f: 1 });   // neck
+  const wa = [Math.PI - 0.5, Math.PI * 0.62, 0.55][k], root = [x - 3, by - 5], wp = [root, add(root, V(11, wa)), add(root, V(23, wa))];
+  S.push({ p: limb(wp, 13, 5), f: 1 }); S.push(...shade(wp, 3, 3.5));
+  S.push({ p: [...ellPts(hx - 3, hy - 8, 3, 3.4, 5, Math.PI, P2), ...ellPts(hx + 2, hy - 9, 3, 3.6, 5, Math.PI, P2), ...ellPts(hx + 6.5, hy - 7, 2.6, 3, 5, Math.PI, P2), [hx - 6, hy - 7]], f: 2, w: 2.2 });   // comb
+  S.push({ p: ellPts(hx, hy, 7.5, 7.5, 14), f: 1 });
+  S.push({ p: [[hx + 6, hy - 2], [hx + 15, hy - 1], [hx + 6.5, hy + 1], [hx + 6, hy - 2]], f: 2, w: 2.2 });   // beak, wide open
+  S.push({ p: [[hx + 6, hy + 2.5], [hx + 13, hy + 7], [hx + 5.5, hy + 4.5], [hx + 6, hy + 2.5]], f: 2, w: 2.2 });
+  S.push({ p: ellPts(hx + 3, hy + 8, 2.4, 3.4, 8), f: 2, w: 2 });   // wattle
+  S.push({ p: ellPts(hx + 1.5, hy - 2, 3.4, 3.8, 10), f: 1, d: 1 }); S.push({ p: ellPts(hx + 0.2, hy - 2, 1.1, 1.3, 6), f: 3, d: 1 });   // panicked eye looking back
+  [[-4, -11], [1, -15], [6, -12]].forEach(([dx, dy], i) => { const j = [0, 2, -1][(k + i) % 3]; S.push({ p: [[hx + dx, hy + dy - 4 + j], [hx + dx * 1.6, hy + dy * 1.5 - 4 + j]], w: 2.2 }); });   // fright marks
+  [[-40, -38], [-26, -54], [-52, -20]].forEach(([dx, dy], i) => { const f = (k + i) % 3, p0 = [x + dx - f * 4, by + dy + f * 3], sw = f - 1; S.push({ p: limb(qb(p0, [p0[0] + 4, p0[1] - 3 + sw * 2], [p0[0] + 8, p0[1] + sw * 2], 4), 3.2, 0.8), f: 1, w: 2.4 }); });   // loose feathers
   return S;
 }
-function donkey(x, y, k) {
-  const S = [], kick = [0, 6, 22][k], lift = [0, 4, 26][k];
-  S.push({ p: ellPts(x, y - 40, 30, 14, 20), f: 1 }); S.push(...hatch(x, y - 40, 30, 14, 5));
-  S.push({ p: [[x + 24, y - 48], [x + 31, y - 60], [x + 38, y - 70]] }); S.push({ p: ellPts(x + 46, y - 72, 11, 7, 12), f: 1 });
-  S.push({ p: [[x + 40, y - 78], [x + 37, y - 96]] }); S.push({ p: [[x + 46, y - 78], [x + 48, y - 94]] }); S.push({ p: [[x + 50, y - 73], [x + 52, y - 73]], d: 1 });
-  S.push({ p: [[x + 18, y - 28], [x + 18, y - 14], [x + 20, y]] }); S.push({ p: [[x + 8, y - 28], [x + 8, y - 14], [x + 9, y]] });
-  S.push({ p: [[x - 16, y - 28], [x - 18 - kick * 0.5, y - 16 - lift * 0.5], [x - 18 - kick, y - lift]] }); S.push({ p: [[x - 24, y - 30], [x - 26, y - 15], [x - 27, y]] });
-  S.push({ p: [[x - 30, y - 44], [x - 40, y - 38 - lift * 0.3], [x - 42, y - 28 - lift * 0.4]] });
+function ram(x, k) {
+  const S = [], gal = [[0.55, -0.5], [-0.4, 0.45], [0.05, 0.05]][k], by = -31 + [0, -3, -1][k];
+  [[-16, 0], [-8, 1], [12, 1], [20, 0]].forEach(([lx, s], i) => {
+    const a = gal[(i + s) % 2], h = [x + lx, by + 12], ft = add(add(h, V(11, a)), V(10, a * 0.4));
+    S.push({ p: limb([h, add(h, V(11, a)), ft], 6, 4.5), f: 1 }); S.push({ p: ellPts(ft[0] + 1, ft[1], 3.2, 2.2, 8), f: 3 });
+  });
+  const body = []; for (let i = 0; i <= 44; i++) { const a = i / 44 * P2, q = 1 + 0.13 * Math.abs(Math.sin(a * 6)); body.push([x + Math.cos(a) * 28 * q, by + Math.sin(a) * 17 * q]); }
+  S.push({ p: body, f: 1 }); S.push(...hatch(x, by, 25, 15, 4.5, 1));
+  [[-14, -7, 0], [-2, -9, 2], [10, -6, 4], [-8, 3, 1], [6, 4, 3]].forEach(([dx, dy, a0]) => { const sp = []; for (let i = 0; i <= 10; i++) { const a = a0 + i * 0.75, rr = 3.4 - i * 0.26; sp.push([x + dx + Math.cos(a) * rr, by + dy + Math.sin(a) * rr]); } S.push({ p: sp, h: 1 }); });   // wool curls
+  const hx = x + 33, hy = by + 6;
+  S.push({ p: ellPts(hx, hy, 12, 8.5, 16), f: 1 });   // head, lowered to charge
+  S.push({ p: limb([[hx - 6, hy - 6], [hx - 13, hy - 9 + [0, 2, -1][k]]], 5, 2.5), f: 1 });   // ear
+  const horn = []; for (let i = 0; i <= 14; i++) { const a = -0.6 - i / 14 * 1.7 * Math.PI, rr = 8 - i * 0.38; horn.push([hx - 5 + Math.cos(a) * rr, hy - 3 + Math.sin(a) * rr]); }
+  S.push({ p: limb(horn, 6, 2.5), f: 2, w: 2.6 });
+  S.push({ p: ellPts(hx + 3, hy - 2.5, 2.8, 3.2, 10), f: 1, d: 1 }); S.push({ p: ellPts(hx + 4, hy - 2.2, 1.2, 1.5, 6), f: 3, d: 1 });
+  S.push({ p: [[hx - 1, hy - 7.5], [hx + 7, hy - 4.5]], d: 1, w: 3.2 });   // furious brow
+  S.push({ p: ellPts(hx + 10, hy + 2, 1.2, 1.2, 6), f: 3, d: 1 }); S.push({ p: [[hx + 6, hy + 5.5], [hx + 10, hy + 5]], d: 1, w: 2 });
+  [[14, -1], [18, 4]].forEach(([dx, dy], i) => { const j = (k + i) % 3; S.push({ p: qb([hx + dx, hy + dy], [hx + dx + 5 + j, hy + dy - 3], [hx + dx + 9 + j * 2, hy + dy + 1], 4), w: 2 }); });   // snort
+  [0, 1].forEach((i) => { const f = (k + i) % 3, cx = x - 36 - f * 8 - i * 4, cy = -5 - f * 3, rr = 3.5 + f * 1.4, puff = []; for (let j = 0; j <= 20; j++) { const a = j / 20 * P2, q = 1 + 0.2 * Math.abs(Math.sin(a * 2.5)); puff.push([cx + Math.cos(a) * rr * 1.3 * q, cy + Math.sin(a) * rr * q]); } S.push({ p: puff, f: 1, w: 2.2 }); });   // dust puffs
+  return S;
+}
+function donkey(x, k) {
+  const S = [], buck = [0, 0.13, 0.3][k], pv = [x + 20, 0], ca = Math.cos(buck), sa = Math.sin(buck);
+  const rot = (p) => { const dx = p[0] - pv[0], dy = p[1] - pv[1]; return [pv[0] + dx * ca - dy * sa, pv[1] + dx * sa + dy * ca]; };
+  const L = [];
+  const tail = [[x - 30, -48], [x - 40, -44 + [0, -4, -9][k]], [x - 44, -34 + [0, -6, -14][k]]];
+  L.push({ p: limb(tail, 3.5, 2.5), f: 1 }); L.push({ p: limb([tail[2], add(tail[2], [-2, 7])], 6, 2), f: 1 });
+  const kick = [[0, 0], [-0.5, -0.3], [-1.3, -1.6]][k];
+  [[x - 18, 0], [x - 25, 1]].forEach(([hx, s]) => { const h = [hx, -32], kn = add(h, V(15, kick[0] * (s ? 0.8 : 1))), ft = add(kn, V(15, kick[1] * (s ? 0.8 : 1))); L.push({ p: limb([h, kn, ft], 9, 5.5), f: 1 }); L.push({ p: ellPts(ft[0], ft[1], 3.6, 2.6, 8), f: 3 }); });
+  [[x + 14, 0], [x + 22, 0]].forEach(([hx]) => { const h = [hx, -32], ft = [hx + 2, 0]; L.push({ p: limb([h, lp(h, ft, 0.5), ft], 8.5, 5.5), f: 1 }); L.push({ p: ellPts(ft[0] + 1, ft[1], 3.6, 2.6, 8), f: 3 }); });
+  L.push({ p: ellPts(x, -42, 32, 15, 22), f: 1 }); L.push(...hatch(x, -42, 30, 14, 4.5, 1));
+  L.push({ p: [[x - 12, -56], [x + 12, -56], [x + 14, -40], [x - 14, -40], [x - 12, -56]], f: 2, w: 2.6 });   // saddle cloth
+  for (let i = 0; i < 6; i++) L.push({ p: [[x - 12 + i * 5, -40], [x - 12 + i * 5, -36]], b: 1, w: 2 });
+  L.push({ p: limb([[x + 22, -48], [x + 30, -58], [x + 37, -66]], 17, 12), f: 1 });   // neck
+  for (let i = 0; i < 4; i++) L.push({ p: [[x + 22 + i * 4, -58 - i * 3], [x + 19 + i * 4, -63 - i * 3]], h: 1 });   // mane
+  const ear = [[0.0, -0.1], [-0.25, -0.35], [-0.6, -0.75]][k];
+  [[x + 38, -74, ear[0]], [x + 43, -75, ear[1]]].forEach(([ex, ey, e]) => L.push({ p: limb([[ex, ey], add([ex, ey], V(20, Math.PI - 0.25 + e))], 7, 3.5), f: 1 }));
+  const hp = ellPts(x + 47, -68, 15, 8.5, 18).map(([px, py]) => { const dx = px - (x + 47), dy = py + 68; return [x + 47 + dx * 0.94 - dy * 0.34, -68 + dx * 0.34 + dy * 0.94]; });
+  L.push({ p: hp, f: 1 }); L.push({ p: [[x + 53, -62], [x + 58, -66]], h: 1 }); L.push({ p: [[x + 51, -60], [x + 57, -63]], h: 1 });
+  L.push({ p: ellPts(x + 44, -72, 3.2, 3.6, 10), f: 1, d: 1 }); L.push({ p: ellPts(x + 45, -71, 1.3, 1.5, 6), f: 3, d: 1 });
+  L.push({ p: [...ellPts(x + 44, -72, 3.4, 3.8, 6, Math.PI, P2), [x + 40.6, -72]], f: 1, d: 1 });   // half-closed, smug lid
+  L.push({ p: qb([x + 51, -59], [x + 56, -56], [x + 61, -61], 4), d: 1, w: 2.4 });   // grin
+  S.push(...L.map((s) => ({ ...s, p: s.p.map(rot) })));
   return S;
 }
 const mapSt = (S, fn) => S.map((s) => ({ ...s, p: s.p.map(fn) }));
 function sceneVillager(k) {
-  const bob = [0, -3, 0][k], sh = [-72 + 8, -78 + bob], hand = [sh[0] + 26, sh[1] - 6];
-  const h = human(-72, 0, k, { run: 1, lean: 8, hat: 'hood', hatch: 1, arms: () => [[26, -6], [14, 6]] });
-  const tx = hand[0] + 46, ty = hand[1] - 14, S = h.S;
-  S.push({ p: [[hand[0] - 16, hand[1] + 6], [tx, ty]] }); S.push({ p: [[tx - 2, ty - 9], [tx + 2, ty + 9]] });
-  S.push({ p: [[tx, ty - 9], [tx + 16, ty - 13]] }); S.push({ p: [[tx, ty], [tx + 18, ty - 4]] }); S.push({ p: [[tx, ty + 9], [tx + 16, ty + 5]] });
-  S.push(...chicken(66, 0, k));
+  const S = person(-70, k, { lean: 9, hood: 1, mood: { brow: 1, mouth: 'shout', pupil: [0.42, 0.05] }, arms: () => [[1.35, 1.75], [1.25, 1.65]],
+    front: (S2, { back, front }) => {   // pitchfork held in both hands, pointing at the chicken
+      const a = back[4], b = front[4], dx = b[0] - a[0], dy = b[1] - a[1], d = Math.hypot(dx, dy) || 1, u = [dx / d, dy / d], tip = add(b, [u[0] * 34, u[1] * 34]);
+      S2.push({ p: [add(a, [-u[0] * 16, -u[1] * 16]), tip], w: 3 });
+      S2.push({ p: [add(tip, [-u[1] * 7, u[0] * 7]), add(tip, [u[1] * 7, -u[0] * 7])], w: 3 });
+      [-7, 0, 7].forEach((o) => { const s = add(tip, [-u[1] * o, u[0] * o]); S2.push({ p: [s, add(s, [u[0] * 13, u[1] * 13])], w: 2.8 }); });
+    } });
+  S.push(...chicken(66, k));
   return S;
 }
-function sceneSheep(k) {
-  const S = sheep(-76, 0, k);
-  S.push(...human(60, 0, k, { run: 1, lean: 10, hat: 'helm', hatch: 1, mouth: 1, arms: (kk) => [[-8, -[16, 26, 14][kk]], [14, -[26, 12, 22][kk]]] }).S);
+function sceneKnight(k) {
+  const S = ram(-72, k);
+  S.push(...person(58, k, { lean: 11, mood: { brow: -1.2, mouth: 'o', pupil: [-0.45, -0.1] }, arms: (kk) => [[[-2.4, -2.0], [-2.0, -2.6], [-2.7, -2.3]][kk], [[2.15, 2.3], [2.4, 2.75], [1.95, 2.2]][kk]],
+    chest: (S2, { neck, hip }) => { const c = lp(neck, hip, 0.45); S2.push({ p: [add(c, [2, -7]), add(c, [3, 7])], b: 1, w: 2.6 }); S2.push({ p: [add(c, [-4, -1]), add(c, [9, -2])], b: 1, w: 2.6 }); },
+    hat: (S2, h, r, kk) => {   // a nasal helm with a plume streaming back
+      const apex = [h[0] - r * 0.15, h[1] - r * 1.65];
+      S2.push({ p: limb([apex, add(apex, [-10, -2 + [0, 3, -2][kk]]), add(apex, [-21, 4 + [-2, 2, 4][kk]])], 6, 2), f: 1 });
+      S2.push({ p: [...qb([h[0] - r * 1.04, h[1] - r * 0.12], [h[0] - r * 0.95, h[1] - r * 1.4], apex, 5), ...qb(apex, [h[0] + r * 0.9, h[1] - r * 1.35], [h[0] + r * 1.02, h[1] - r * 0.62], 5).slice(1), [h[0] - r * 1.04, h[1] - r * 0.12]], f: 2, w: 3 });
+      S2.push({ p: limb([[h[0] + r * 0.66, h[1] - r * 0.62], [h[0] + r * 0.74, h[1] + r * 0.18]], 3.6, 3), f: 2, w: 2.4 });
+    },
+    front: (S2, { back, hd, r }) => {   // the sword flails behind him; sweat flies off
+      const h = back[4], a = [-2.5, -2.9, -2.1][k], tip = add(h, V(30, a)), gd = add(h, V(4, a));
+      S2.push({ p: limb([gd, tip], 4, 2), f: 1 }); S2.push({ p: [add(gd, V(6, a + 1.57)), add(gd, V(6, a - 1.57))], b: 1, w: 3 });
+      [[-1.25, -0.7], [-1.45, -0.1], [-1.1, -1.1]].forEach(([dx, dy], i) => { const j = (k + i) % 3, c = [hd[0] + r * (dx - j * 0.18), hd[1] + r * (dy - j * 0.1)]; S2.push({ p: [...qb([c[0], c[1] - 3.5], [c[0] + 2.6, c[1] + 1], [c[0], c[1] + 2.2], 3), ...qb([c[0], c[1] + 2.2], [c[0] - 2.6, c[1] + 1], [c[0], c[1] - 3.5], 3).slice(1)], f: 1, d: 1 }); });
+    } }));
   return S;
 }
 function sceneMonk(k) {
-  const S = donkey(-6, 0, k), ang = [-0.12, -1.1, -2.9][k], tr = [[0, 0], [-14, -14], [-40, -52]][k], pv = [0, -48];
-  const m = human(0, 0, 0, { run: 0, lean: -2, robe: 1, hat: 'monk', mouth: 1, arms: () => [[18, -[14, 22, 30][k]], [-14, -[22, 30, 20][k]]] }).S;
-  const ca = Math.cos(ang), sa = Math.sin(ang);
-  S.push(...mapSt(m, ([px, py]) => { const x = px, y = py - 48 + 6, dx = x - pv[0], dy = y - pv[1]; return [pv[0] + dx * ca - dy * sa + tr[0], pv[1] + dx * sa + dy * ca + tr[1]]; }));
+  const S = donkey(-6, k), ang = [-0.12, -1.1, -2.9][k], tr = [[0, 0], [-14, -16], [-48, -70]][k], pv = [0, -56];
+  const m = person(0, 0, { lean: -2, long: 1, legs: () => [[1.45, 0.15], [1.6, 0.3]], mood: { brow: -1.3, mouth: 'o', pupil: [0.1, -0.45] }, arms: () => [[Math.PI - [0.5, 0.9, 0.3][k], Math.PI - [0.2, 0.6, 0.1][k]], [Math.PI - [-0.6, -0.3, -0.9][k], Math.PI - [-0.3, 0.1, -0.6][k]]],
+    hat: (S2, h, r) => { S2.push({ p: limb(ellPts(h[0], h[1] - 1, r * 0.98, r * 0.98, 6, Math.PI * 0.62, Math.PI * 1.18), 6, 4), f: 1 }); S2.push(...shade(ellPts(h[0], h[1] - 1, r, r, 6, Math.PI * 0.62, Math.PI * 1.18), 3, 2.5)); },
+    chest: (S2, { wF }) => { S2.push({ p: qb(wF, [wF[0] + 3, wF[1] + 10], [wF[0] - 1, wF[1] + 18], 4), b: 1, w: 2.6 }); } });
+  const c = Math.cos(ang), s = Math.sin(ang);
+  S.push(...mapSt(m, ([px, py]) => { const yy = py - 30, dx = px - pv[0], dy = yy - pv[1]; return [pv[0] + dx * c - dy * s + tr[0], pv[1] + dx * s + dy * c + tr[1]]; }));
+  const bk = [[30, -120], [-6, -140], [-22, -168]][k], ba = [0.3, -0.9, -2.2][k];   // his book takes flight
+  const corner = (dx, dy) => [bk[0] + dx * Math.cos(ba) - dy * Math.sin(ba), bk[1] + dx * Math.sin(ba) + dy * Math.cos(ba)];
+  S.push({ p: [corner(-8, -5), corner(8, -5), corner(8, 5), corner(-8, 5), corner(-8, -5)], f: 2, w: 2.6 });
+  S.push({ p: [corner(0, -5), corner(0, 5)], d: 1, w: 2 });
   return S;
 }
 function funny(api) {
-  const { rand, player } = api, dur = DURATION.funny, pc = mute(player.color), SC = 1.85, GY = 838;
-  const jt = []; for (let i = 0; i < 256; i++) jt.push((rand() - 0.5) * 1.8);
+  const { rand, player } = api, dur = DURATION.funny, pc = mute(player.color), SC = 1.75, GY = 830;
+  const jt = []; for (let i = 0; i < 256; i++) jt.push((rand() - 0.5) * 1.6);
   const fin = (S, k) => S.map((s, si) => ({ ...s, p: s.p.map(([x, y], pi) => [x + jt[(si * 7 + pi * 3 + k * 11) % 256], y + jt[(si * 5 + pi * 13 + k * 17 + 3) % 256]]) }));
   const mk = (cx, build, sp) => ({ cx, sp, poses: [0, 1, 2].map((k) => fin(build(k), k)) });
-  const scenes = [mk(420, sceneVillager, 150), mk(960, sceneSheep, 150), mk(1500, sceneMonk, 0)];
+  const scenes = [mk(545, sceneVillager, 150), mk(930, sceneKnight, 150), mk(1315, sceneMonk, 0)];
   scenes.forEach((s) => { s.tot = s.poses[0].reduce((a, st) => a + st.p.length, 0); });
-  const wash = mkWash(rand, 960, 690, 1900, 440, 16);
-  const gl = []; for (let i = 0; i <= 24; i++) gl.push([-170 + i * 14.2, 3 + Math.sin(i * 0.9) * 1.6 + (rand() - 0.5) * 1.4]);
+  const wash = mkWash(rand, 930, 700, 1100, 300, 12), layer = mkLayer();
+  const gl = []; for (let i = 0; i <= 24; i++) gl.push([-108 + i * 9, 3 + Math.sin(i * 0.9) * 1.4 + (rand() - 0.5) * 1.2]);
   const S = sfx(api);
   if (S) {
     for (let i = 0; i < 26; i++) S.noise(0.2 + i * 0.1, 0.05, { f0: 2600 + (i % 4) * 600, f1: 3800, q: 2.5, g: 0.1 });
     [0, 1, 2, 3, 4].forEach((i) => S.tone(1.5 + i * 0.17, 0.14, { type: 'sawtooth', f0: 150 - (i % 2) * 14, f1: 120 - (i % 2) * 10, g: 0.2, atk: 0.02, lp: 520 }));
     S.tone(2.5, 0.3, { type: 'sawtooth', f0: 130, f1: 90, g: 0.16, atk: 0.03, lp: 450 });
   }
+  const INK = '#1a100a', WAL = '#1a100a', DET = '#2a1a10';
   return { duration: dur, render(t) {
     const c = begin(api), fo = fade(t, dur, 0.5), e = api.ease;
-    drawWash(c, wash, e.out(win(t, 0, 0.6)), fo * 1.3);
+    // the ink wash stays inside x 340-1520 (soft sides), so it never darkens the cam or CA's score rows
+    dimDraw(c, layer, (lc) => {
+      drawWash(lc, wash, e.out(win(t, 0, 0.6)), fo * 1.3);
+      lc.globalCompositeOperation = 'destination-in';
+      const g = lc.createLinearGradient(340, 0, 1520, 0);
+      g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.1, '#000'); g.addColorStop(0.9, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      lc.fillStyle = g; lc.fillRect(0, 0, 1920, 1080); lc.globalCompositeOperation = 'source-over';
+    }, api.keepOut);
     scenes.forEach((sc, i) => {
       const t0 = 0.2 + i * 0.4, t1 = t0 + 1.1, p = win(t, t0, t1);
       if (p <= 0) return;
-      const k = t < t1 ? 0 : [0, 1, 2, 1][Math.floor((t - t1) * 6) % 4], allow = p * sc.tot;
+      const k = t < t1 ? 0 : [0, 1, 2, 1][Math.floor((t - t1) * 6) % 4], allow = p >= 1 ? Infinity : p * sc.tot;
       c.save(); c.translate(sc.cx, GY); c.scale(SC, SC); c.lineCap = 'round'; c.lineJoin = 'round'; c.globalAlpha = fo;
       // ground: a wavy pen line with ticks that scroll like a flip-book
-      c.strokeStyle = DG; c.lineWidth = 1.3 / SC; c.beginPath(); const gn = Math.floor(p * gl.length);
+      c.strokeStyle = DG; c.lineWidth = 1.4 / SC; c.beginPath(); const gn = Math.floor(p * gl.length);
       for (let g = 0; g < gn; g++) { if (g) c.lineTo(gl[g][0], gl[g][1]); else c.moveTo(gl[g][0], gl[g][1]); } c.stroke();
-      if (p > 0.3) for (let g = 0; g < 12; g++) { const xx = (((g * 30 - sc.sp * t) % 360) + 360) % 360 - 180; c.globalAlpha = fo * 0.8; c.beginPath(); c.moveTo(xx, 7); c.lineTo(xx - 8, 12); c.stroke(); }
-      c.globalAlpha = fo;
+      if (p > 0.3) for (let g = 0; g < 8; g++) { const xx = (((g * 27 - sc.sp * t) % 216) + 216) % 216 - 108; c.globalAlpha = fo * 0.8; c.beginPath(); c.moveTo(xx, 7); c.lineTo(xx - 7, 11); c.stroke(); }
       let used = 0;
-      const vis = [];
-      sc.poses[k].forEach((st, si) => {
-        const n = Math.min(st.p.length, Math.max(0, Math.floor(allow - used))); used += sc.poses[0][si].p.length; if (n >= 2) vis.push([st, n]);
-      });
       const path = (st, n) => { c.beginPath(); c.moveTo(st.p[0][0], st.p[0][1]); for (let q = 1; q < n; q++) c.lineTo(st.p[q][0], st.p[q][1]); };
-      // pass 1: dark walnut under-stroke; pass 2: ivory body fill; pass 3: ink / brass lines
-      c.strokeStyle = '#1a100a'; c.lineWidth = 7 / SC; c.globalAlpha = fo * 0.85;
-      for (const [st, n] of vis) if (!st.h && !st.d) { path(st, n); c.stroke(); }
-      c.fillStyle = IV2; c.globalAlpha = fo * 0.85;
-      for (const [st, n] of vis) if (st.f && n === st.p.length) { path(st, n); c.fill(); }
-      for (const [st, n] of vis) {
+      // painter's order: each shape gets its walnut under-stroke, its fill, then its ink / ivory / brass line
+      sc.poses[k].forEach((st, si) => {
+        const n = Math.min(st.p.length, Math.max(0, Math.floor(allow - used))); used += sc.poses[0][si] ? sc.poses[0][si].p.length : st.p.length;
+        if (n < 2) return;
+        const full = n === st.p.length;
         path(st, n);
-        c.strokeStyle = st.d ? '#2a1a10' : st.h ? DG : IV; c.lineWidth = (st.d ? 2.6 : st.h ? 1.8 : 3.5) / SC; c.globalAlpha = fo * (st.h ? 0.9 : 1); c.stroke();
-      }
+        if (st.h) { c.strokeStyle = DG; c.lineWidth = 1.8 / SC; c.globalAlpha = fo * 0.95; c.stroke(); return; }
+        if (st.d) {
+          if (st.f && full) { c.fillStyle = st.f === 3 ? INK : IV; c.globalAlpha = fo; c.fill(); }
+          c.strokeStyle = DET; c.lineWidth = (st.w || 1.6) / SC; c.globalAlpha = fo; c.stroke(); return;
+        }
+        c.strokeStyle = WAL; c.lineWidth = ((st.w || 3.5) + 3.5) / SC; c.globalAlpha = fo * 0.85; c.stroke();
+        if (st.f && full) { c.fillStyle = st.f === 2 ? GD : st.f === 3 ? INK : IV2; c.globalAlpha = fo * (st.f === 3 ? 1 : 0.88); c.fill(); }
+        c.strokeStyle = st.b || st.f === 2 ? BR : IV; c.lineWidth = (st.w || 3.5) / SC; c.globalAlpha = fo; c.stroke();
+      });
       c.restore();
     });
     const a = fo * e.out(win(t, 0.3, 0.9));
     rich(c, [{ s: 'The scribes are laughing.', f: `italic 600 48px ${FS}`, c: IV }], 960, 566, { a, p: e.out(win(t, 0.3, 1.1)), blur: 16 });
-    rich(c, [{ s: player.name, f: `600 40px ${FT}`, c: pc }], 960, 614, { ls: 8, a: fo * e.out(win(t, 0.8, 1.3)), blur: 12 });
-    taper(c, [[820, 626], [960, 630], [1100, 626]], 1, 2.2, pc, fo * e.out(win(t, 1.0, 1.5)), 0.5);
+    if (player.name) {
+      rich(c, [{ s: player.name, f: `600 40px ${FT}`, c: pc }], 960, 614, { ls: 8, a: fo * e.out(win(t, 0.8, 1.3)), blur: 12 });
+      taper(c, [[820, 626], [960, 630], [1100, 626]], 1, 2.2, pc, fo * e.out(win(t, 1.0, 1.5)), 0.5);
+    }
   } };
 }
 
