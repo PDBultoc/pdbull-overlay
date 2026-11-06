@@ -19,7 +19,7 @@ export const CODE = ['overlay.html', 'panel.html', 'panel.js', 'panel.css',
   'core/settings.js', 'core/streamlabs.js', 'core/twitchchat.js',
   'core/ambience.js', 'core/dustdrift.js', 'core/endinglogic.js', 'core/matchbarlogic.js', 'core/sceneaudio.js',
   'modules/camchat.js', 'modules/camchat.css', 'modules/intro.js', 'modules/intro.css', 'modules/alerts.js', 'modules/alerts.css',
-  'modules/matchbar.js', 'modules/matchbar.css',
+  'modules/matchbar.js', 'modules/matchbar.css', 'modules/reactions-fx.js', 'modules/reactions.js', 'modules/reactions.css',
   'shared/war-table.js', 'shared/campaign.js', 'shared/tokens.css'];
 
 async function refreshCache(fetchFn) {

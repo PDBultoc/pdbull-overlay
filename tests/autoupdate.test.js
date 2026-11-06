@@ -33,7 +33,8 @@ test('CODE lists exactly the production files that exist', async () => {
   const want = ['overlay.html', 'panel.html', 'panel.js', 'panel.css',
     ...['html', 'js', 'css'].flatMap((e) => ['starting', 'brb', 'ending'].map((s) => `scenes/${s}.${e}`)),
     ...fs.readdirSync(new URL('core/', root)).filter((n) => n.endsWith('.js')).map((n) => 'core/' + n),
-    ...['camchat', 'intro', 'alerts', 'matchbar'].flatMap((m) => [`modules/${m}.js`, `modules/${m}.css`]),
+    ...['camchat', 'intro', 'alerts', 'matchbar', 'reactions'].flatMap((m) => [`modules/${m}.js`, `modules/${m}.css`]),
+    'modules/reactions-fx.js',
     'shared/war-table.js', 'shared/campaign.js', 'shared/tokens.css'];
   assert.deepEqual([...CODE].sort(), want.sort());
 });
