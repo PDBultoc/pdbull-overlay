@@ -91,11 +91,13 @@ function mkLayer() { const cv = document.createElement('canvas'); cv.width = PLA
 export function punch(lc, ko, offX = PLAY.x, offY = PLAY.y) {
   if (!ko) return;
   const ox = ko.x - offX, oy = ko.y - offY;
-  lc.save(); lc.globalCompositeOperation = 'destination-out'; lc.fillStyle = '#000';
-  lc.globalAlpha = 1; lc.fillRect(ox, oy, ko.w, ko.h);
-  lc.globalAlpha = 0.25;
-  for (let d = 5; d <= 30; d += 5) lc.fillRect(ox - d, oy - d, ko.w + 2 * d, ko.h + 2 * d);
-  lc.restore();
+  lc.save();
+  try {
+    lc.globalCompositeOperation = 'destination-out'; lc.fillStyle = '#000';
+    lc.globalAlpha = 1; lc.fillRect(ox, oy, ko.w, ko.h);
+    lc.globalAlpha = 0.25;
+    for (let d = 5; d <= 30; d += 5) lc.fillRect(ox - d, oy - d, ko.w + 2 * d, ko.h + 2 * d);
+  } finally { lc.restore(); }
 }
 function dimDraw(c, layer, fn, keepOut) {
   const lc = layer.getContext('2d');

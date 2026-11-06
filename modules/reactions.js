@@ -57,19 +57,23 @@ export function mountWith(layer, { bus, settings }, opts = {}) {
     looping = false; if (dead) return;
     ctx.clearRect(0, 0, W, H);
     const tNow = now();
+    let ok = 0; // alpha of the outgoing composite, 0 = none drawn
+    const comp = () => { ctx.save(); ctx.globalAlpha = ok; ctx.drawImage(off, 0, 0); ctx.restore(); };
     if (outgoing) {
       const k = (tNow - outgoing.cut) / 1000 / FADE;
       if (k >= 1) { end(outgoing); outgoing = null; }
       else {
         const oc = outgoing.api.ctx; oc.clearRect(0, 0, W, H);
         if (!draw(outgoing, (tNow - outgoing.t0) / 1000, oc)) { end(outgoing); outgoing = null; }
-        else { ctx.save(); ctx.globalAlpha = 1 - k; ctx.drawImage(off, 0, 0); ctx.restore(); }
+        else { ok = 1 - k; comp(); }
       }
     }
     if (cur) {
       const t = (tNow - cur.t0) / 1000;
       if (t > cur.inst.duration) { end(cur); cur = null; }
-      else if (!draw(cur, t, ctx)) { end(cur); cur = null; }
+      else if (!draw(cur, t, ctx)) { // partial pixels of a failed render must not stay on the canvas
+        end(cur); cur = null; ctx.clearRect(0, 0, W, H); if (ok) comp();
+      }
     }
     if (cur || outgoing) { try { punch(ctx, caKeepOut(players), 0, 0); } catch {} } // never cover the CaptureAge score rows
     if (cur || outgoing) { looping = true; raf(frame); }

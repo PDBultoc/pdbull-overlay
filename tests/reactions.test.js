@@ -13,10 +13,10 @@ function rig(over = {}) {
   const layer = { appendChild() {}, ownerDocument: null };
   const bus = fakeBus();
   const h = mountWith(layer, { bus, cfg: {}, settings: { get: () => ({ casting: { sound: false, volume: 0.5 } }) } },
-    { effects, raf: (f) => frames.push(f), now: () => t, makeCanvas: () => { const ctx = { globalAlpha: 1, globalCompositeOperation: 'source-over', draws: [], fills: [], stack: [], clearRect() {},
+    { effects, raf: (f) => frames.push(f), now: () => t, makeCanvas: () => { const ctx = { globalAlpha: 1, globalCompositeOperation: 'source-over', draws: [], fills: [], stack: [], ops: [], clearRect() { this.ops.push('clear'); },
       save() { this.stack.push([this.globalAlpha, this.globalCompositeOperation]); },
       restore() { [this.globalAlpha, this.globalCompositeOperation] = this.stack.pop() || [1, 'source-over']; },
-      fillRect(x, y, w, h) { this.fills.push({ x, y, w, h, op: this.globalCompositeOperation, a: this.globalAlpha }); },
+      fillRect(x, y, w, h) { this.ops.push('fill'); this.fills.push({ x, y, w, h, op: this.globalCompositeOperation, a: this.globalAlpha }); },
       drawImage() { this.draws.push(this.globalAlpha); } }; ctxs.push(ctx); return { getContext: () => ctx, style: {} }; },
       makeDom: () => { const d = { removed: false, remove() { d.removed = true; }, style: {} }; doms.push(d); return d; }, audio: () => (over.audio ? over.audio() : null) });
   const step = (ms) => { t += ms; const f = frames.splice(0); f.forEach((fn) => fn()); };
@@ -77,6 +77,24 @@ test('after a frame the engine erases the keep-out rect (destination-out, feathe
   assert.ok(outs.some((f) => f.x === ko.x - 30 && f.w === ko.w + 60 && f.a === 0.25), 'feather ring out to 30 px');
   assert.equal(main.globalCompositeOperation, 'source-over');
   assert.equal(main.globalAlpha, 1);
+});
+test('a render that draws then throws leaves the canvas cleared and the loop idles', () => {
+  const r = rig({ wow: (api) => ({ duration: 5, render() { api.ctx.fillRect(1, 1, 5, 5); throw new Error('bad'); }, dispose() {} }) });
+  r.bus.emit('reaction', { fx: 'wow', id: 'a' });
+  r.step(16);
+  const ops = r.ctxs[0].ops;
+  assert.equal(ops[ops.length - 1], 'clear', 'cleared after the throw');
+  assert.equal(r.frames.length, 0);
+});
+test('an outgoing-only frame (current effect failed) still gets the keep-out erase', () => {
+  const r = rig({ blunder: () => ({ duration: 5, render() { throw new Error('bad'); }, dispose() {} }) });
+  r.bus.emit('reaction', { fx: 'wow', id: 'a' }); r.step(16);
+  r.bus.emit('reaction', { fx: 'blunder', id: 'b' });
+  r.ctxs[0].fills.length = 0;
+  r.step(16);
+  assert.equal(r.h.debug.activeFx(), null);
+  assert.ok(r.ctxs[0].fills.some((f) => f.op === 'destination-out' && f.a === 1), 'erase ran');
+  assert.equal(r.frames.length, 1);
 });
 test('a replaced effect keeps rendering (offscreen, faded) for <=150 ms, then is disposed', () => {
   const r = rig();
