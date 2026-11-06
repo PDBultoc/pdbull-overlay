@@ -6,7 +6,8 @@ import { createRemote, newRoom, stripSecrets } from './core/remote.js';
 import { connectStreamlabs } from './core/streamlabs.js';
 import { normalizeMatch } from './core/aoe2.js';
 import { coerceField, countdownEnd, roomLinks, testEvent, TEST_ALERTS, TEST_MATCHES, latestUpdate, createSender, createRawLog } from './core/panelcore.js';
-import { FX, makeReaction, parseManual, searchUrl, searchEntries, clampPoint } from './core/reactionlogic.js';
+import { FX, makeReaction, parseManual, searchUrl, searchEntries, clampPoint, castSourceLine } from './core/reactionlogic.js';
+import { replayFromFile } from './core/recheader.js';
 
 function boot() {
   const settings = createSettings(localStorage, 'pdbull.v1');
@@ -188,7 +189,7 @@ function boot() {
     try { const j = await (await fetch(searchUrl(qs))).json();
       if (my !== searchSeq) return; // a newer search is in flight
       results.replaceChildren(...searchEntries(j).map((p) => el('button', { type: 'button', text: `${p.name} · ${p.country} · ${p.games} games`,
-        onclick: () => { write('casting.followProfileId', p.profileId); write('casting.followName', p.name); results.replaceChildren(); showFollowed(); } })));
+        onclick: () => { write('casting.followProfileId', p.profileId); write('casting.followName', p.name); write('casting.auto', false); results.replaceChildren(); showFollowed(); } })));
     } catch { if (my === searchSeq) results.textContent = 'Search failed — try again'; }
   });
   // Manual fallback: used only while the overlay has sent no casting-match with players.
@@ -199,9 +200,27 @@ function boot() {
   let castLive = false;
   bus.on('casting-match', (m) => { castLive = !!(m && m.teams && m.teams.length); if (!castLive) { castTeams = parseManual(manual.value); drawPlayers(); } });
   castTeams = parseManual(manual.value); drawPlayers();
+  const sourceLine = el('div', { class: 'dim', text: castSourceLine(null) });
+  bus.on('casting-match', (m) => { sourceLine.textContent = castSourceLine(m); });
+  // Recordings loaded in CaptureAge write no new file: pick the file here instead.
+  const pickInput = el('input', { type: 'file', accept: '.aoe2record', style: 'display:none' });
+  const pickMsg = el('span', { class: 'dim' });
+  pickInput.addEventListener('change', async () => {
+    const f = pickInput.files && pickInput.files[0];
+    if (!f) return;
+    pickMsg.textContent = '…';
+    const m = await replayFromFile(f);
+    pickInput.value = '';
+    if (!m) { pickMsg.textContent = 'Not a readable replay'; return; }
+    pickMsg.textContent = '';
+    write('casting.auto', true);
+    send('replay-match', m);
+  });
   const castingCard = card('Casting', [
+    check('Auto from replay', 'casting.auto'), sourceLine,
+    el('div', { class: 'btns' }, [el('button', { type: 'button', text: 'Load replay…', onclick: () => pickInput.click() }), pickMsg, pickInput]),
     followed, el('div', { class: 'row' }, [search]), results, manual,
-    el('div', { class: 'btns' }, [el('button', { type: 'button', text: 'Follow my own games', onclick: () => { write('casting.followProfileId', null); write('casting.followName', ''); showFollowed(); } })]),
+    el('div', { class: 'btns' }, [el('button', { type: 'button', text: 'Follow my own games', onclick: () => { write('casting.followProfileId', null); write('casting.followName', ''); write('casting.auto', false); showFollowed(); } })]),
     playersBox, fxBtns, pad,
     el('div', { class: 'btns' }, [el('button', { type: 'button', text: 'Centre', onclick: () => { castPoint = clampPoint(NaN, NaN); placeDot(); } })]),
     tallyBox,

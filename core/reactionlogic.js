@@ -87,3 +87,14 @@ export function searchEntries(json) {
   return l.filter((p) => Number.isFinite(p.profileId)).slice(0, 8)
     .map((p) => ({ profileId: p.profileId, name: p.name, country: p.country || '', games: Number(p.games) || 0 }));
 }
+
+/** Dock line under the Casting players: where the current list comes from. */
+export function castSourceLine(m) {
+  const n = ((m && m.teams) || []).reduce((a, t) => a + ((t && t.players) || []).length, 0);
+  if (!n) return 'No match yet: manual list below';
+  if (m.source === 'replay') {
+    const hm = /T(\d{2}:\d{2})/.exec(m.startedAt || '');
+    return `From replay${hm ? ' ' + hm[1] : ''} · ${n} players`;
+  }
+  return `From aoe2companion · ${n} players`;
+}

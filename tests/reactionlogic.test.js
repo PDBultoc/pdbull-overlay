@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FX, DURATION, clampPoint, makeReaction, replaces, createTally, playersFromMatch, parseManual, searchUrl, searchEntries, seeded, castingChatBottom, caKeepOut } from '../core/reactionlogic.js';
+import { FX, DURATION, clampPoint, makeReaction, replaces, createTally, playersFromMatch, parseManual, searchUrl, searchEntries, seeded, castingChatBottom, caKeepOut, castSourceLine } from '../core/reactionlogic.js';
 
 test('six reactions with their lengths', () => {
   assert.deepEqual(FX, ['blunder', 'funny', 'wow', 'wololo', 'spotlight', 'gg']);
@@ -79,4 +79,12 @@ test('CA score rows: chat bottom and keep-out grow with the player count (measur
 test('seeded is deterministic', () => {
   const a = seeded(7), b = seeded(7);
   assert.equal(a(), b()); assert.equal(a(), b());
+});
+test('castSourceLine: where the dock players come from', () => {
+  const teams = [{ team: 1, players: [{ name: 'A' }, { name: 'B' }] }, { team: 2, players: [{ name: 'C' }] }];
+  assert.equal(castSourceLine({ source: 'replay', startedAt: '2026-11-06T14:23:38', teams }), 'From replay 14:23 · 3 players');
+  assert.equal(castSourceLine({ source: 'replay', startedAt: null, teams }), 'From replay · 3 players');
+  assert.equal(castSourceLine({ matchId: 'm1', teams }), 'From aoe2companion · 3 players');
+  assert.equal(castSourceLine({ teams: [] }), 'No match yet: manual list below');
+  assert.equal(castSourceLine(null), 'No match yet: manual list below');
 });
