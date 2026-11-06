@@ -28,6 +28,10 @@ const bodyOf = (evt) => (evt && evt.event === 'message' ? parse(evt.message) : n
 const isEvent = (b) => Boolean(b && b.kind === 'event');
 const settingsOf = (evt) => { const b = bodyOf(evt); return b && !isEvent(b) ? b : null; };
 
+// The watcher's replay-match is the one event a restarted overlay must recover from the cache:
+// the current cast game, if it started less than 3 h ago.
+export const REPLAY_MAX_AGE_MS = 3 * 3600 * 1000;
+
 export function createRemote({
   room,
   onSettings,
@@ -62,8 +66,11 @@ export function createRemote({
     try {
       const r = await fetchFn(url + '/json?poll=1&since=all');
       if (r.ok) {
-        const all = (await r.text()).split('\n').map(parse).map(settingsOf).filter(Boolean);
+        const lines = (await r.text()).split('\n').map(parse);
+        const all = lines.map(settingsOf).filter(Boolean);
         if (all.length) deliver(all[all.length - 1]);
+        const rm = lines.map(bodyOf).filter((b) => isEvent(b) && b.type === 'replay-match' && now() - Number(b.t) <= REPLAY_MAX_AGE_MS).pop();
+        if (rm) { try { onEvent(rm.type, rm.payload); } catch { /* ignore */ } }
       }
       status(true);
     } catch (e) { status(false, 'sync offline'); }

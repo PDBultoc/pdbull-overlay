@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { topicFor, newRoom, stripSecrets, createRemote } from '../core/remote.js';
+import { topicFor, newRoom, stripSecrets, createRemote, REPLAY_MAX_AGE_MS } from '../core/remote.js';
 
 test('room codes are long, random, url-safe; topic is namespaced', () => {
   const a = newRoom(), b = newRoom();
@@ -97,4 +97,27 @@ test('stripSecrets removes the token from the real DEFAULTS shape', async () => 
   const out = stripSecrets(s);
   assert.equal('streamlabsToken' in out.modules.alerts, false);
   assert.equal(out.modules.alerts.sounds.follow, '');
+});
+
+const NOW = 10 * 3600e3;
+const cached = (b) => JSON.stringify({ event: 'message', message: JSON.stringify(b) });
+const rm = (id, t) => cached({ kind: 'event', type: 'replay-match', payload: { id }, t });
+test('start() delivers the newest cached replay-match younger than 3 h, once', async () => {
+  const fetchFn = async () => ({ ok: true, text: async () => [
+    rm('old', NOW - REPLAY_MAX_AGE_MS - 1), rm('a', NOW - 7200e3), rm('b', NOW - 60e3),
+    cached({ kind: 'event', type: 'donation', payload: { amount: 5 }, t: NOW }),
+  ].join('\n') });
+  const events = [];
+  const r = createRemote({ room: 'r9', fetchFn, ES: FakeES, now: () => NOW, onSettings: () => {}, onEvent: (t, p) => events.push([t, p.id ?? p.amount]) });
+  await r.start();
+  assert.deepEqual(events, [['replay-match', 'b']]);
+  r.stop();
+});
+test('a cached replay-match older than 3 h, or without t, is not delivered', async () => {
+  const fetchFn = async () => ({ ok: true, text: async () => [rm('old', NOW - REPLAY_MAX_AGE_MS - 1), cached({ kind: 'event', type: 'replay-match', payload: { id: 'x' } })].join('\n') });
+  const events = [];
+  const r = createRemote({ room: 'r10', fetchFn, ES: FakeES, now: () => NOW, onSettings: () => {}, onEvent: (t) => events.push(t) });
+  await r.start();
+  assert.deepEqual(events, []);
+  r.stop();
 });
