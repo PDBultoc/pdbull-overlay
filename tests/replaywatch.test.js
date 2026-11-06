@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, copyFileSync, utimesSync, rmSync } from 'node:fs';
+import { mkdtempSync, copyFileSync, utimesSync, rmSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -63,6 +63,23 @@ test('watcher --once --dry stays silent for a replay older than 2 min', () => {
     const r = runOnce(dir);
     assert.equal(r.status, 0, r.stderr); assert.equal(r.stdout.trim(), '');
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+test('watcher without --dir finds the live replay in any savegame folder (empty "0" folder first)', () => {
+  const home = mkdtempSync(join(tmpdir(), 'rw-'));
+  try {
+    const base = join(home, 'Games', 'Age of Empires 2 DE');
+    mkdirSync(join(base, '0', 'savegame'), { recursive: true });
+    const live = join(base, '76561199000000001', 'savegame');
+    mkdirSync(live, { recursive: true });
+    copyFileSync(HEAD, join(live, LIVE));
+    const now = Date.now() / 1000; utimesSync(join(live, LIVE), now, now);
+    const r = spawnSync(process.execPath, [WATCH, '--once', '--dry'], { encoding: 'utf8', timeout: 20000,
+      env: { ...process.env, USERPROFILE: home, HOME: home, APPDATA: home, LOCALAPPDATA: home } });
+    assert.equal(r.status, 0, r.stderr);
+    const ev = JSON.parse(r.stdout.trim());
+    assert.equal(ev.payload.id, LIVE);
+    assert.deepEqual(ev.payload.teams.map((t) => t.players.map((p) => p.name)), [['PolishedPoo'], ['Dobby']]);
+  } finally { rmSync(home, { recursive: true, force: true }); }
 });
 test('startupVbs runs node hidden on the watcher script', () => {
   const v = startupVbs('C:\\Program Files\\nodejs\\node.exe', 'C:\\x\\tools\\replay-watch.mjs');

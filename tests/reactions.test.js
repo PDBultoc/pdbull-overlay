@@ -12,7 +12,7 @@ function rig(over = {}) {
     [k, over[k] || ((api) => { apis.push(api); return { duration: 1, render: (tt) => log.push([k, +tt.toFixed(2), api.player && api.player.name, api.ctx]), dispose: () => log.push([k, 'end']) }; })]));
   const layer = { appendChild() {}, ownerDocument: null };
   const bus = fakeBus();
-  const h = mountWith(layer, { bus, cfg: {}, settings: { get: () => ({ casting: { sound: false, volume: 0.5, ...(over.casting || {}) } }) } },
+  const h = mountWith(layer, { bus, cfg: {}, replay: over.replay, settings: { get: () => ({ casting: { sound: false, volume: 0.5, ...(over.casting || {}) } }) } },
     { effects, raf: (f) => frames.push(f), now: () => t, makeCanvas: () => { const ctx = { globalAlpha: 1, globalCompositeOperation: 'source-over', draws: [], fills: [], stack: [], ops: [], clearRect() { this.ops.push('clear'); },
       save() { this.stack.push([this.globalAlpha, this.globalCompositeOperation]); },
       restore() { [this.globalAlpha, this.globalCompositeOperation] = this.stack.pop() || [1, 'source-over']; },
@@ -190,6 +190,13 @@ test('replay-match: pinned, shown as the casting match, and wins over later poll
   assert.deepEqual(castMatches(r).at(-1), { matchId: 'rep1', map: '', teams: RM('rep1').teams, source: 'replay', startedAt: '2026-11-06T14:23:38' });
   r.bus.emit('match-running', POLL);
   assert.equal(castMatches(r).at(-1).matchId, 'rep1');
+});
+test('a replay cached before mount is replayed from deps.replay; the later live copy is ignored', () => {
+  const r = rig({ replay: () => RM('rep0') });
+  assert.equal(castMatches(r).length, 1);
+  assert.equal(castMatches(r)[0].matchId, 'rep0'); assert.equal(castMatches(r)[0].source, 'replay');
+  r.bus.emit('replay-match', RM('rep0'));
+  assert.equal(castMatches(r).length, 1);
 });
 test('the same replay twice (room + the other overlay) is shown once', () => {
   const r = rig();

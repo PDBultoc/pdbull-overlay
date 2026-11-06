@@ -6,7 +6,8 @@ import { EFFECTS, punch } from './reactions-fx.js';
 const W = 1920, H = 1080, FADE = 0.15;
 const NEUTRAL = { name: '', color: '#d6c6a6' };
 
-export function mountWith(layer, { bus, settings }, opts = {}) {
+export function mountWith(layer, deps, opts = {}) {
+  const { bus, settings } = deps;
   const effects = opts.effects || EFFECTS;
   const raf = opts.raf || ((f) => requestAnimationFrame(f));
   const now = opts.now || (() => performance.now());
@@ -98,6 +99,12 @@ export function mountWith(layer, { bus, settings }, opts = {}) {
     if (cur) { end(outgoing); outgoing = cur; cut(outgoing); }
     cur = next; kick();
   }
+  function onReplay(p) {
+    if (!p || !p.id || !Array.isArray(p.teams) || !p.teams.length) return;
+    if (pinned && pinned.id === p.id) return; // arrives from the room, from the other overlay, and from the cache
+    pinned = p;
+    if (auto()) showPinned();
+  }
   const offs = [
     bus.on('reaction', fire),
     bus.on('match-running', (p) => {
@@ -109,18 +116,15 @@ export function mountWith(layer, { bus, settings }, opts = {}) {
       tally.forMatch(m.id); publishTally();
       bus.emit('casting-match', { matchId: m.id, map: m.map || '', teams: playersFromMatch(m) });
     }),
-    bus.on('replay-match', (p) => {
-      if (!p || !p.id || !Array.isArray(p.teams) || !p.teams.length) return;
-      if (pinned && pinned.id === p.id) return; // arrives from the room, from the other overlay, and from the cache
-      pinned = p;
-      if (auto()) showPinned();
-    }),
+    bus.on('replay-match', onReplay),
     bus.on('casting-reset', (p) => { // arrives locally and again via the room: the second copy must not wipe later reactions
       const id = p && p.id;
       if (id != null) { if (seenReset.has(id)) return; seenReset.add(id); if (seenReset.size > 50) seenReset.delete(seenReset.values().next().value); }
       tally.reset(); publishTally();
     }),
   ];
+  // the overlay may have received the cached replay-match before this module subscribed (dynamic import)
+  if (typeof deps.replay === 'function') { try { onReplay(deps.replay()); } catch {} }
   return {
     unmount() { dead = true; offs.forEach((f) => f && f()); end(cur); end(outgoing); canvas.remove && canvas.remove(); if (AC) AC.close().catch(() => {}); },
     busy: () => !!(cur || outgoing),

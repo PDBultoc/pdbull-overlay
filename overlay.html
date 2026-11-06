@@ -34,6 +34,7 @@ const bus = createBus({ name: 'pdbull' });
 const settings = createSettings();
 const stage = document.getElementById('stage');
 const live = new Map();
+let lastReplay = null; // newest replay-match from the room; modules mounting late read it (the cache can arrive before they subscribe)
 const ratings = createRatings(); // one RM 1v1 ELO lookup (cache + timeout) shared by the intro and the match banner
 
 function unmountMod(name) {
@@ -53,7 +54,7 @@ async function mountMod(name, cfg) {
     const mod = await import('./modules/' + name + '.js');
     if (live.get(name) !== entry) return;
     stage.appendChild(layer);
-    entry.handle = mod.mount(layer, { settings, bus, cfg, latest: () => poller.latest(), reportStatus, playersOverride, ratings }) || null;
+    entry.handle = mod.mount(layer, { settings, bus, cfg, latest: () => poller.latest(), reportStatus, playersOverride, ratings, replay: () => lastReplay }) || null;
   } catch (e) {
     // a module that does not exist yet (or throws) is skipped; the others keep running
     console.warn('module skipped:', name, (e && e.message) || e);
@@ -84,7 +85,7 @@ const room = q.get('room') || '';
 const remote = createRemote({
   room,
   onSettings: (s) => settings.patch(s),
-  onEvent: (type, payload) => bus.emit(type, payload),
+  onEvent: (type, payload) => { if (type === 'replay-match') lastReplay = payload; bus.emit(type, payload); },
   // own source name: the dock's room dot must not be flipped by the overlay's sync state
   onStatus: (st) => bus.emit('status', { ...st, source: 'room-overlay' }),
 });

@@ -30,17 +30,17 @@ function log(msg) {
     fs.appendFileSync(LOG, `${new Date().toISOString()} ${msg}\n`);
   } catch { /* logging must never stop the watcher */ }
 }
-function findSavegameDir() {
+function findSavegameDirs() { // every account folder has its own savegame folder; only one holds the live replays
   const base = path.join(os.homedir(), 'Games', 'Age of Empires 2 DE');
   const ids = fs.existsSync(base) ? fs.readdirSync(base).filter((d) => /^\d+$/.test(d)) : [];
-  for (const id of ids) { const d = path.join(base, id, 'savegame'); if (fs.existsSync(d)) return d; }
-  return null;
+  return ids.map((id) => path.join(base, id, 'savegame')).filter((d) => fs.existsSync(d));
 }
 
 let cfg = {};
 try { cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8')); } catch { /* no config yet */ }
-const dir = opt('--dir') || cfg.dir || findSavegameDir();
-if (!dir) { log('no savegame folder found'); process.exit(1); }
+const explicit = opt('--dir') || cfg.dir;
+const dirs = explicit ? [explicit] : findSavegameDirs();
+if (!dirs.length) { log('no savegame folder found'); process.exit(1); }
 if (!dry && !cfg.room) { log(`no room in ${CONFIG}`); process.exit(1); }
 if (!dry && !ROOM_RE.test(cfg.room)) { log('room in config is invalid'); process.exit(1); }
 
@@ -69,15 +69,19 @@ async function tick() {
   if (busy) return; busy = true;
   try {
     if (!once) writeLock(); // heartbeat: a fresh t tells a second start this watcher is alive
-    let files;
-    try {
-      files = fs.readdirSync(dir).filter((n) => /\.aoe2record$/i.test(n))
-        .map((name) => ({ name, mtimeMs: fs.statSync(path.join(dir, name)).mtimeMs }));
-    } catch (e) { log('list failed: ' + e.message); return; }
+    const files = [];
+    for (const dir of dirs) {
+      try {
+        for (const name of fs.readdirSync(dir).filter((n) => /\.aoe2record$/i.test(n))) {
+          const full = path.join(dir, name);
+          files.push({ name, mtimeMs: fs.statSync(full).mtimeMs, full });
+        }
+      } catch (e) { log(`list failed ${dir}: ${e.message}`); }
+    }
     const live = pickLive(files, Date.now());
     if (nextStep(state, live) !== 'read') return;
     let players = [];
-    try { const h = await inflateHead(readHead(path.join(dir, live.name))); players = h ? playersFromHeader(h) : []; }
+    try { const h = await inflateHead(readHead(live.full)); players = h ? playersFromHeader(h) : []; }
     catch (e) { log(`read failed ${live.name}: ${e.message}`); }
     if (!players.length) {
       const n = (state.tries.get(live.name) || 0) + 1; state.tries.set(live.name, n);
@@ -95,6 +99,6 @@ async function tick() {
   } finally { busy = false; }
 }
 
-log(`start pid=${process.pid} dir=${dir}${dry ? ' (dry)' : ''}${once ? ' (once)' : ''}`);
+log(`start pid=${process.pid} dir=${dirs.join(';')}${dry ? ' (dry)' : ''}${once ? ' (once)' : ''}`);
 await tick().catch((e) => log('tick: ' + e.message));
 if (!once) setInterval(() => { tick().catch((e) => log('tick: ' + e.message)); }, TICK_MS);
