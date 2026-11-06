@@ -1,5 +1,5 @@
 # pdbull-overlay — NEXT (2026-11-06, casting scene T1–T7 done, T8 open)
-- main @ (this commit), local only, NOT pushed. LIVE is still Pages 2026-11-05.8; local version.json = 2026-11-06.1. `timeout 120 npm test` → 220/220.
+- main @ (this commit); code pushed at 44ecabb, only NEXT.md commits after it are local. LIVE = Pages 2026-11-06.1 (casting scene). `timeout 120 npm test` → 220/220.
 - NEXT TASK: T8 of `docs/plans/2026-11-06-casting-scene-plan.md` — (1) Paul's verdict DONE 2026-11-06: "Look good" on the Funny redraw + the finished set. (2) PUSHED 2026-11-06 (44ecabb), Pages serves 2026-11-06.1. Still needs Paul's yes per action: (3) OBS scene "Casting" per INSTALL 2e (Paul adds it, or obs-apply.mjs only if he asks; back up first), (4) live gate on one cast.
 - Stills for the verdict: `.superpowers/casting-stills/funny/frames/f000{1,2,3}.png` (Funny t 1.2/2.4/3.2) and `.superpowers/casting-stills/final/frames/f0099.png` (all six, real fonts). Regenerate: tools/frames-server.mjs (OUT_DIR=…, POST frames from the page) — see ledger.
 - Rulings R1–R19, gate results and deferred minors: `.superpowers/sdd/2026-11-06-casting-scene-plan/progress.md` (git-ignored; keep until T8 lands).
