@@ -196,7 +196,7 @@ export function eloText(r)                                         // -> '1834' 
 - [x] (2026-11-05: pushed 9c3e123, Pages serves 2026-11-05.8) After Paul's yes: `git push`; wait for the Pages build; open `https://pdbultoc.github.io/pdbull-overlay/version.json` and confirm the new version string.
 
 ### S9: OBS gates on Paul's PC (each OBS change only with Paul's yes)
-- [ ] **Stinger alpha:** Paul sets the new file on the Stinger (S6 guide) and switches Joc → BRB → Joc. Pass = scroll over the game with no black box, scene changes hidden under the paper. Fail → Track Matte fallback (Risks row 1), one attempt.
+- [x] (passed 2026-11-05, Paul: "Arată bine") **Stinger alpha:** Paul sets the new file on the Stinger (S6 guide) and switches Joc → BRB → Joc. Pass = scroll over the game with no black box, scene changes hidden under the paper. Fail → Track Matte fallback (Risks row 1), one attempt.
 - [ ] **Ending Soon:** source swapped; the candle beat plays on entering the scene; chat visible.
 - [ ] **Audio:** ambience audible on Starting/BRB/End in the OBS mixer, dock on/off and volume change it within 2 s; silent in Joc.
 - [ ] **Banner:** real match: appears after the intro, all players with ELO, nothing covered; hides at match end. Add banner on/off to the T14 performance check (round-2 plan).
