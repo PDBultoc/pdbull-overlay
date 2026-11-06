@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>A · Comic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+</head><body>
+<span style="position:absolute;left:-999px;font:40px 'Bangers'">preload</span>
+<script type="module">
+import { startHarness } from './harness.js';
+import { EFFECTS } from './a-comic.js';
+try { await document.fonts.load("40px 'Bangers'"); } catch (e) { /* fall back to system fonts */ }
+startHarness(EFFECTS, { title: 'A · Comic' });
+</script></body></html>

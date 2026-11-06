@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>D · Chronicle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,500;1,600;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/tokens.css">
+</head><body>
+<script type="module">
+import { startHarness } from './harness.js';
+import { EFFECTS } from './d-chronicle.js';
+const faces = ['600 100px Cinzel', '900 100px Cinzel', 'italic 600 100px "Cormorant Garamond"', 'italic 700 100px "Cormorant Garamond"', 'italic 500 100px "Cormorant Garamond"'];
+try { await Promise.all(faces.map((f) => document.fonts.load(f, 'GWBLUNDERLegendarygabc'))); } catch (e) { /* fall back to serif */ }
+startHarness(EFFECTS, { title: 'D · Chronicle' });
+</script></body></html>
