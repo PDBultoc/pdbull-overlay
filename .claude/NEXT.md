@@ -1,15 +1,11 @@
-# pdbull-overlay — NEXT (2026-11-06, round 3 DONE and live)
-- LIVE: Pages version.json = 2026-11-05.8 (code ff8953f). `timeout 60 npm test` → 191/191 at ff8953f. Local main is ahead of origin by docs-only commits (S9 notes), not pushed.
-- Round 3 plan docs/plans/2026-11-05-round3-production-plan.md: S0–S9 all ticked. S9: stinger gate passed 2026-11-05 ("Arată bine"); Paul streamed the night of 2026-11-05: "merge totul ok". Round-2 T15 live gate ticked on that report.
-- OBS as set by Claude over WebSocket at Paul's request, 2026-11-05:
-  - Stinger = repo assets/stinger-scroll.webm, Time 1000 ms.
-  - Starting (Browser 3) and BRB (Browser 2): shutdown + Control audio via OBS.
-  - Ending Soon: source 'Ending Soon Scene' (ending.html?room=…, shutdown, refresh on active, OBS audio). The old image + Alertbox are hidden, not removed.
-  - Settings survived an OBS restart (checked 2026-11-06).
-- Backup + probes: .superpowers/sdd/2026-11-05-round3-production-plan/obs/ (git-ignored; the backup holds the Alertbox URL). obs-read.mjs, obs-meter.mjs N and obs-meter-series.mjs N are read-only; obs-apply.mjs writes. Run any of them with `timeout 30 node <file>`.
-- Open: round-2 T14 performance numbers (game FPS, OBS skipped frames, banner on/off) were never measured. Ask Paul whether he wants them, since the live stream showed no problem. The dock ambience on/off "≤2 s" was not measured with a meter.
-- Deferred minors + rulings: .superpowers/sdd/2026-11-05-round3-production-plan/progress.md and final-review.md. Known: the dock test banner disappears at the next poll (0–20 s).
-- Capture tip:
-  - Overlay DOM shots need `--host-resolver-rules="MAP data.aoe2companion.com ~NOTFOUND, MAP ntfy.sh ~NOTFOUND, MAP sockets.streamlabs.com ~NOTFOUND" --virtual-time-budget=8000`.
-  - 3D scenes: in-app browser `?shot=1&t=N` + `wt.advance(0.001); canvas.toDataURL()`.
-- RULE (Paul): never reproduce a hang by re-running; read the code, find the cause, fix it. Headless captures run one at a time, with timeout 60, tree-kill + zero-count proof, never in retry loops.
+# pdbull-overlay — NEXT (2026-11-06, casting scene: spec + plan approved, no code yet)
+- main @ 8b8963b, local only (not pushed). LIVE is still Pages 2026-11-05.8 (round 3, code ff8953f). `timeout 120 npm test` → 191/191.
+- NEXT TASK: execute `docs/plans/2026-11-06-casting-scene-plan.md` (T1–T8 carry `depends:`). T1 and T2 are READY in parallel; then T3 + T5 + T6 in parallel; T4 (Funny redraw) has a Paul gate. Spec: `docs/specs/2026-11-06-casting-scene-design.md`.
+- Approved look: D · Chronicle (`prototypes/casting/d-chronicle.html`, "Arată frumos"). Rejected: plaque/seal variants and the off-style A comic / B cinematic / C ink-and-fire (kept in `prototypes/casting/` for reference only). Paul: "Funny dar nu comic book funny", colours only from our palette.
+- Open for Paul: CA captures at 1v1 / 2v2 / 4v4 (1920×1080 PNG into `docs/ca/`) for the chat-offset gate in T7; push and OBS scene need his yes per action.
+- OBS state from round 3 unchanged (stinger, Starting/BRB/End sources). Probes: `.superpowers/sdd/2026-11-05-round3-production-plan/obs/` (`timeout 30 node <file>`, read-only except obs-apply.mjs).
+- Captures:
+  - In-app browser stills: `prototypes/casting/<style>.html?fx=<name>&t=<s>&x=820&y=470`. The harness now keeps re-rendering the fixed t; take the screenshot in its own call after the navigate, with the preview pane shown.
+  - Never `taskkill /IM msedge.exe`: it kills Paul's browser (auto-mode denied it). Kill only your own PID tree.
+- RULE (Paul): never reproduce a hang by re-running; read the code. Headless captures one at a time, timeout 60.
+- Still open from round 3: the T14 performance numbers were never measured (ask Paul if he wants them).
