@@ -1,11 +1,7 @@
-# pdbull-overlay — NEXT (2026-11-06, casting scene: spec + plan approved, no code yet)
-- main @ 8b8963b (+ this NEXT.md commit), local only (not pushed). LIVE is still Pages 2026-11-05.8 (round 3, code ff8953f). `timeout 120 npm test` → 191/191.
-- NEXT TASK: execute `docs/plans/2026-11-06-casting-scene-plan.md` (T1–T8 carry `depends:`). T1 and T2 are READY in parallel; then T3 + T5 + T6 in parallel; T4 (Funny redraw) has a Paul gate. Spec: `docs/specs/2026-11-06-casting-scene-design.md`.
-- Approved look: D · Chronicle (`prototypes/casting/d-chronicle.html`, "Arată frumos"). Rejected: plaque/seal variants and the off-style A comic / B cinematic / C ink-and-fire (kept in `prototypes/casting/` for reference only). Paul: "Funny dar nu comic book funny", colours only from our palette.
-- CA captures from Paul (1v1/2v2/3v3/4v4) are in `.superpowers/ca/` (git-ignored, other players visible). Measured CA score-row tops are in the plan (T1 `castingChatBottom` / `caKeepOut`). Push and OBS scene need Paul's yes per action.
-- OBS state from round 3 unchanged (stinger, Starting/BRB/End sources). Probes: `.superpowers/sdd/2026-11-05-round3-production-plan/obs/` (`timeout 30 node <file>`, read-only except obs-apply.mjs).
-- Captures:
-  - In-app browser stills: `prototypes/casting/<style>.html?fx=<name>&t=<s>&x=820&y=470`. The harness now keeps re-rendering the fixed t; take the screenshot in its own call after the navigate, with the preview pane shown.
-  - Never `taskkill /IM msedge.exe`: it kills Paul's browser (auto-mode denied it). Kill only your own PID tree.
-- RULE (Paul): never reproduce a hang by re-running; read the code. Headless captures one at a time, timeout 60.
-- Still open from round 3: the T14 performance numbers were never measured (ask Paul if he wants them).
+# pdbull-overlay — NEXT (2026-11-06, casting scene T1–T7 done, T8 open)
+- main @ (this commit), local only, NOT pushed. LIVE is still Pages 2026-11-05.8; local version.json = 2026-11-06.1. `timeout 120 npm test` → 220/220.
+- NEXT TASK: T8 of `docs/plans/2026-11-06-casting-scene-plan.md` — needs Paul's yes per action: (1) his verdict on the Funny redraw + the finished set, (2) `git push`, (3) OBS scene "Casting" per INSTALL 2e (Paul adds it, or obs-apply.mjs only if he asks; back up first), (4) live gate on one cast.
+- Stills for the verdict: `.superpowers/casting-stills/funny/frames/f000{1,2,3}.png` (Funny t 1.2/2.4/3.2) and `.superpowers/casting-stills/final/frames/f0099.png` (all six, real fonts). Regenerate: tools/frames-server.mjs (OUT_DIR=…, POST frames from the page) — see ledger.
+- Rulings R1–R19, gate results and deferred minors: `.superpowers/sdd/2026-11-06-casting-scene-plan/progress.md` (git-ignored; keep until T8 lands).
+- Open minors for Paul's verdict: monk's book reaches y ~536 in the last pose; ram dust/chicken legs near x 692; keys 1–6 only with the Casting card focused (documented).
+- Gotchas: in-app browser pane hidden → rAF and img.decode() stall (obs 0186); test in a shown pane or shim rAF in a test tab. Never `taskkill /IM msedge.exe`. Never re-run a hang.

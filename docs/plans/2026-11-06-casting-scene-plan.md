@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development (recommended) or superpowers:executing-plans. Steps use `- [ ]` checkboxes. Owner rules in `~/.claude/CLAUDE.md` apply: fan out READY tasks, ≤8 agents, reviewers on sonnet, long jobs owned by the controller, never re-run a hang, headless captures one at a time (timeout 60) and never `taskkill /IM msedge.exe` (it kills Paul's browser — kill only your own PID tree).
 
+**Status 2026-11-06 (execution session):** T1–T7 done and committed locally on main (8b374be … see `git log`), `npm test` green. T4's Paul gate (Funny doodles) and T8 (Paul's verdict on the set, push, OBS scene, live gate) are open. Rulings and gate results: `.superpowers/sdd/2026-11-06-casting-scene-plan/progress.md`.
+
 **Goal:** an OBS "Casting" scene for any AoE2 match cast through CaptureAge. It shows Paul's cam + chat, alerts, and six hand-fired reactions (Blunder, Funny, Wow, Wololo, Spotlight, GG) in the approved D · Chronicle style, driven from a new "Casting" card in the dock.
 
 **Architecture:** the same engine as rounds 2–3. `overlay.html?scene=casting` mounts a different module set (`camchat`, `alerts`, new `reactions`). Pure rules live in `core/reactionlogic.js` (tested). The six effect factories move from `prototypes/casting/d-chronicle.js` into `modules/reactions-fx.js`. `modules/reactions.js` owns the canvas, the clock, sound and the tally. The dock sends `reaction` events over the existing bus/room and reads `casting-match` / `casting-tally` back over the local bus.
