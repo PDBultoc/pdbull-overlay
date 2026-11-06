@@ -2,7 +2,7 @@
 - main @ 8b8963b (+ this NEXT.md commit), local only (not pushed). LIVE is still Pages 2026-11-05.8 (round 3, code ff8953f). `timeout 120 npm test` → 191/191.
 - NEXT TASK: execute `docs/plans/2026-11-06-casting-scene-plan.md` (T1–T8 carry `depends:`). T1 and T2 are READY in parallel; then T3 + T5 + T6 in parallel; T4 (Funny redraw) has a Paul gate. Spec: `docs/specs/2026-11-06-casting-scene-design.md`.
 - Approved look: D · Chronicle (`prototypes/casting/d-chronicle.html`, "Arată frumos"). Rejected: plaque/seal variants and the off-style A comic / B cinematic / C ink-and-fire (kept in `prototypes/casting/` for reference only). Paul: "Funny dar nu comic book funny", colours only from our palette.
-- Open for Paul: CA captures at 1v1 / 2v2 / 4v4 (1920×1080 PNG into `docs/ca/`) for the chat-offset gate in T7; push and OBS scene need his yes per action.
+- CA captures from Paul (1v1/2v2/3v3/4v4) are in `.superpowers/ca/` (git-ignored, other players visible). Measured CA score-row tops are in the plan (T1 `castingChatBottom` / `caKeepOut`). Push and OBS scene need Paul's yes per action.
 - OBS state from round 3 unchanged (stinger, Starting/BRB/End sources). Probes: `.superpowers/sdd/2026-11-05-round3-production-plan/obs/` (`timeout 30 node <file>`, read-only except obs-apply.mjs).
 - Captures:
   - In-app browser stills: `prototypes/casting/<style>.html?fx=<name>&t=<s>&x=820&y=470`. The harness now keeps re-rendering the fixed t; take the screenshot in its own call after the navigate, with the preview pane shown.

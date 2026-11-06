@@ -24,6 +24,7 @@
 ## Facts checked while planning (2026-11-06)
 | Fact | How it was checked |
 |---|---|
+| T1's test + implementation, extracted verbatim from this plan, pass in a scratch copy: `ℹ tests 10`, `ℹ pass 10` | dry run 2026-11-06 |
 | Baseline `timeout 120 npm test` → `ℹ tests 191`, `ℹ pass 191`, `ℹ fail 0` | run, log `.superpowers/casting-baseline.log` |
 | `GET https://data.aoe2companion.com/api/profiles?search=F1Re&page=1` → `{ profiles: [{ profileId: 196310, name: "F1Re", country: "br", games: "15669", … }], hasMore: true }` | curl, 2026-11-06 |
 | `normalizeMatch(raw, profileId)` returns `{ id, running, mode, map, me, myTeam, enemies: [[…]] }`; players carry `{ profileId, name, civ, rating, colorHex, country }` | `core/aoe2.js:1-53` |
@@ -32,12 +33,17 @@
 | Chat bottom: `chatBottom(n) = 190 + 24*(n-2)`, set as `--chat-bottom` | `core/camchatlogic.js:5-8`, `modules/camchat.js:43` |
 | Prototype D imports only `PLAY` from the harness and uses `api.{ctx, rand, ease, player, x, y, tally, audio}` | grep of `prototypes/casting/d-chronicle.js` |
 | `roomLinks(room, panelUrl)` returns `{ overlay, starting, brb, ending }`; `LOCAL_ONLY = new Set(['latest-snapshot'])` | `core/panelcore.js:28-31, 117` |
-| CA keep-out zones (1v1, measured on Paul's CA:DE screenshot): top bar 0–118, bottom panel y ≥ 965, minimap 730–1190 × 850–1080, score lines 1690–1920 × 885–960 | `prototypes/casting/harness.js` `CA_ZONES` |
+| CA keep-out zones, measured on Paul's captures at 1v1 / 2v2 / 3v3 / 4v4 (`.superpowers/ca/ca-*.webp`, git-ignored, 2000×1125 scaled to 1920×1080) | script over the pixels (saturated name rows in x 1520–1900) + visual check |
+| Score rows top (y): 1v1 **894**, 2v2 **826**, 3v3 **719**, 4v4 **612**; x from ~1540 (4v4) / ~1575 (3v3) / ~1690 (1v1) to 1920 | same |
+| Top bar incl. the team-game unit icons reaches y ≈ 134 (4v4); the clock sits at y 134 | visual, ca-4v4 |
+| Bottom stats panel top: y ≈ 963 at 1v1/2v2; for x ≥ 1190 it rises to ≈ 914 (3v3) and ≈ 869 (4v4); minimap top ≈ 850 | visual |
+| CA's own in-game chat appears at the left, x 0–330 × y ≈ 540–655 (3v3); it does not touch our cam (x 8–330, y 755–935) | visual, ca-3v3 |
 
 ## Real-data gates
 | Heuristic / threshold | Real sample | Expected |
 |---|---|---|
-| Chat bottom in casting clears CA's score lines | Paul's CA captures at 1v1, 2v2 and 4v4 (1920×1080 PNG in `docs/ca/`). Ask Paul in T7 if they are missing. | Measured top of CA's score rows per player count. `castingChatBottom(n)` ≥ (1080 − that top) + 10 px for n = 2, 4, 8. Until measured, use `chatBottom(n) + 20`. |
+| Chat bottom in casting clears CA's score rows | `.superpowers/ca/ca-{1v1,2v2,3v3,4v4}.webp` as the harness background (`?bg=../../.superpowers/ca/ca-4v4.webp`) | `castingChatBottom(2/4/6/8)` = 198 / 266 / 373 / 480 (= 1080 − rows top + 12). The lowest chat line sits above the first CA score row in every capture. |
+| Reactions never darken CA's score rows | the same captures, Spotlight + Blunder + GG stills | `caKeepOut(n)` rect stays undimmed (soft 30 px edge) |
 | Alerts clear CA's top bar | an alert demo (`?demo=sub`) with `scene=casting` over a CA capture | band top ≥ 150 px; no alert pixel above y 118 |
 | Follow-player search | `searchEntries(json)` on the live response for "F1Re" | first entry `{ profileId: 196310, name: 'F1Re' }` |
 | Followed player's live match feeds the player buttons | the poller with `profileId` 196310 during one of F1Re's games (or his latest match) | `playersFromMatch` gives ≥ 2 teams, every player with a `#rrggbb` colour |
@@ -66,12 +72,13 @@ depends: none
 - `clampPoint(x, y)`, `makeReaction(o)`, `replaces(current, incoming)`
 - `createTally()` → `{ record, forMatch, reset, rows, awards }`
 - `playersFromMatch(match)`, `parseManual(text)`, `searchUrl(name)`, `searchEntries(json)`
+- `castingChatBottom(n)`, `caKeepOut(n)` → `{ x, y, w, h }` (n = players in the match)
 
 - [ ] **Step 1: write the failing test** `tests/reactionlogic.test.js`:
 ```js
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FX, DURATION, clampPoint, makeReaction, replaces, createTally, playersFromMatch, parseManual, searchUrl, searchEntries, seeded } from '../core/reactionlogic.js';
+import { FX, DURATION, clampPoint, makeReaction, replaces, createTally, playersFromMatch, parseManual, searchUrl, searchEntries, seeded, castingChatBottom, caKeepOut } from '../core/reactionlogic.js';
 
 test('six reactions with their lengths', () => {
   assert.deepEqual(FX, ['blunder', 'funny', 'wow', 'wololo', 'spotlight', 'gg']);
@@ -132,6 +139,13 @@ test('manual players: one "Name #rrggbb" per line, up to 8, one team', () => {
     { team: 1, players: [{ name: 'Hera', color: '#2fbf4a' }, { name: 'TaToH', color: '#d6c6a6' }, { name: 'bad line #zz', color: '#d6c6a6' }] }]);
   assert.deepEqual(parseManual(''), []);
   assert.equal(parseManual(Array.from({ length: 12 }, (_, i) => 'P' + i).join('\n'))[0].players.length, 8);
+});
+test('CA score rows: chat bottom and keep-out grow with the player count (measured 2026-11-06)', () => {
+  assert.deepEqual([2, 4, 6, 8].map(castingChatBottom), [198, 266, 373, 480]);
+  assert.equal(castingChatBottom(3), 232);          // halfway between 2 and 4
+  assert.equal(castingChatBottom(0), 198); assert.equal(castingChatBottom(20), 480);
+  assert.deepEqual(caKeepOut(8), { x: 1520, y: 600, w: 400, h: 370 });
+  assert.deepEqual(caKeepOut(2), { x: 1670, y: 882, w: 250, h: 88 });
 });
 test('seeded is deterministic', () => {
   const a = seeded(7), b = seeded(7);
@@ -207,6 +221,16 @@ export function playersFromMatch(match) {
   return teams.map((t, i) => ({ team: i + 1, players: t.map((p) => ({ name: p.name, color: HEX.test(p.colorHex) ? p.colorHex : FALLBACK_COLOR })) }))
     .filter((t) => t.players.length);
 }
+// CaptureAge score rows (measured on Paul's captures 2026-11-06, 1920x1080): top y per player count.
+const CA_ROWS_TOP = { 2: 894, 4: 826, 6: 719, 8: 612 };
+const CA_ROWS_X = { 2: 1690, 4: 1640, 6: 1575, 8: 1540 };
+function caAt(table, n) {
+  n = Math.min(8, Math.max(2, Math.round(Number(n)) || 2));
+  if (table[n] != null) return table[n];
+  return Math.round((table[n - 1] + table[n + 1]) / 2);
+}
+export const castingChatBottom = (n) => 1080 - caAt(CA_ROWS_TOP, n) + 12;
+export const caKeepOut = (n) => { const top = caAt(CA_ROWS_TOP, n) - 12, x = caAt(CA_ROWS_X, n) - 20; return { x, y: top, w: 1920 - x, h: 970 - top }; };
 export function parseManual(text) {
   const players = String(text || '').split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 8).map((l) => {
     const m = l.match(/^(.*\S)\s+(#[0-9a-f]{6})$/i);
@@ -402,6 +426,7 @@ export function mountWith(layer, { bus, settings }, opts = {}) {
 function hash(s) { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; }
 export function mount(layer, deps) { return mountWith(layer, deps); }
 ```
+  Keep-out: `mountWith` keeps `players` = the player count of the last `match-running` (default 2). It passes `api.keepOut = caKeepOut(players)`. In `reactions-fx.js`, every full-area darkening layer (the Spotlight dim, the Blunder candle-flinch, the GG dark wash) ends with a soft punch-out of that rect on its own canvas pixels: `ctx.globalCompositeOperation = 'destination-out'` with a 30 px feathered rect. That is allowed, because it only erases our own pixels.
   `bus.on` returns an unsubscribe function (`core/bus.js:74-78`), so `offs.forEach((f) => f())` is right. Volume: in `modules/reactions-fx.js` the sound helper builds one master gain (`master.gain.value = 0.65`, prototype line 107). Change it to `0.65 * (api.volume ?? 0.7)`.
   
   `modules/reactions.css`: `[data-mod=reactions] { position: absolute; inset: 0; pointer-events: none; }`
@@ -473,7 +498,7 @@ test('casting defaults', () => {
     - Poller: wrap the creation in `function makePoller(id)`, using `profileId: id` and the same callbacks as today. Start with `const followId = () => (SCENE === 'casting' && settings.get().casting.followProfileId) || settings.get().profileId;`.
     - In `settings.onChange`: if `followId()` differs from the current poller id, call `poller.stop()`, recreate it and `start()`. `latest: () => poller.latest()` must read the current poller (use a `let`).
   - `modules/alerts.css`: add `body.scene-casting [data-mod=alerts] .band { top: 150px; }`
-  - `modules/camchat.js:43`: the chat bottom uses `chatBottom(n) + (document.body.classList.contains('scene-casting') ? 20 : 0)` until the real-data gate (T7) measures CA's rows.
+  - `modules/camchat.js:43`: `const setBottom = (n) => root.style.setProperty('--chat-bottom', (document.body.classList.contains('scene-casting') ? castingChatBottom(n) : chatBottom(n)) + 'px');` Import `castingChatBottom` from `../core/reactionlogic.js`.
 - [ ] **Step 4:** run `timeout 120 npm test`. Expected: `ℹ fail 0`.
 - [ ] **Step 5:** commit `feat(casting): scene=casting module set, follow-player poller, alert/chat offsets`.
 
@@ -571,7 +596,7 @@ depends: T3, T5, T6
 - [ ] **Step 3: real-data gates** (the table above):
   - follow-player search for "F1Re" in the dock → picks `196310`;
   - the overlay poller switches to his matches (status dot OK) and the player buttons show his match;
-  - CA score-line heights for 2v2 and 4v4 from Paul's captures → set the casting chat offset in `modules/camchat.js` to the measured value, and add a test for `castingChatBottom(n)` in `core/camchatlogic.js` if the value depends on n.
+  - over each of `.superpowers/ca/ca-{1v1,2v2,3v3,4v4}.webp` (`overlay.html?room=test&scene=casting&demo=1` cannot show a background image, so use `prototypes/casting/d-chronicle.html?bg=../../.superpowers/ca/ca-4v4.webp` for reactions, and a screenshot of the overlay page layered over the capture for chat): the lowest chat line is above CA's first score row, and Spotlight / Blunder / GG leave the score rows undimmed.
 - [ ] **Step 4:** `docs/INSTALL.md`, new section **2e. Casting (CaptureAge)** (Romanian):
   - new OBS scene "Casting": CA Window Capture, under it Paul's camera at X 8, Y 755, 322×180, on top a Browser Source from **Copy Casting link**, 1920×1080, with **Control audio via OBS** on;
   - how to use the Casting card: follow player, click a player and then a reaction, the point pad, keys 1–6 while the dock has focus, Reset tally.
