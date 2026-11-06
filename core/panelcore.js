@@ -28,7 +28,7 @@ export function coerceField(kind, raw) {
 export function roomLinks(room, panelUrl) {
   const q = '?room=' + room;
   const at = (p) => new URL(p + q, panelUrl).href;
-  return { overlay: at('overlay.html'), starting: at('scenes/starting.html'), brb: at('scenes/brb.html'), ending: at('scenes/ending.html') };
+  return { overlay: at('overlay.html'), starting: at('scenes/starting.html'), brb: at('scenes/brb.html'), ending: at('scenes/ending.html'), casting: new URL('overlay.html' + q + '&scene=casting', panelUrl).href };
 }
 
 // Demo matches for the dock's banner test buttons: exactly what normalizeMatch (core/aoe2.js)
@@ -116,7 +116,7 @@ export function testEvent(key, now = Date.now(), opts = {}) {
 // Dock events go to the LOCAL bus first (OBS dock and sources share it), then to the room as
 // backup. Receivers dedup by event id. latest-snapshot frames are local only: nobody reads
 // them in the room and every room message counts against ntfy's daily limit.
-const LOCAL_ONLY = new Set(['latest-snapshot']);
+const LOCAL_ONLY = new Set(['latest-snapshot', 'casting-match', 'casting-tally']);
 export function createSender({ bus, remote }) {
   return async (name, payload) => {
     try { bus.emit(name, payload); } catch { /* local delivery must not block the room copy */ }

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createSettings } from '../core/settings.js';
 import { stripSecrets } from '../core/remote.js';
 import { normalizeMatch } from '../core/aoe2.js';
-import { countdownEnd, roomLinks, testEvent, TEST_ALERTS, fakeMatch4v4, latestUpdate, MAX_NAME, TEST_MATCHES, coerceField } from '../core/panelcore.js';
+import { countdownEnd, roomLinks, testEvent, TEST_ALERTS, fakeMatch4v4, latestUpdate, MAX_NAME, TEST_MATCHES, coerceField, createSender } from '../core/panelcore.js';
 
 const mem = () => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; };
 const PA = JSON.parse(readFileSync(new URL('./fixtures/pa100.json', import.meta.url)));
@@ -118,4 +118,14 @@ test('number and range fields write numbers, not strings', () => {
   assert.equal(coerceField('number', '5'), 5);
   assert.ok(Number.isNaN(coerceField('range', 'abc')));
   assert.equal(coerceField('text', '0.35'), '0.35');
+});
+
+test('casting link and local-only casting events', async () => {
+  assert.equal(roomLinks('abc', 'https://pdbultoc.github.io/pdbull-overlay/panel.html').casting,
+    'https://pdbultoc.github.io/pdbull-overlay/overlay.html?room=abc&scene=casting');
+  const sent = []; const bus = { emit: (n) => sent.push('bus:' + n) };
+  const remote = { publishEvent: async (n) => sent.push('room:' + n) };
+  const send = createSender({ bus, remote });
+  await send('casting-tally', {}); await send('casting-match', {}); await send('reaction', {});
+  assert.deepEqual(sent, ['bus:casting-tally', 'bus:casting-match', 'bus:reaction', 'room:reaction']);
 });
